@@ -1,3 +1,14 @@
+/*
+    +--------------------------------------------------------------------+
+    | PECL :: propro                                                     |
+    +--------------------------------------------------------------------+
+    | Redistribution and use in source and binary forms, with or without |
+    | modification, are permitted provided that the conditions mentioned |
+    | in the accompanying LICENSE file are met.                          |
+    +--------------------------------------------------------------------+
+    | Copyright (c) 2013 Michael Wallner <mike@php.net>                  |
+    +--------------------------------------------------------------------+
+*/
 
 #ifndef PHP_PROPRO_H
 #define PHP_PROPRO_H
