@@ -250,7 +250,6 @@ static zval *read_dimension(zval *object, zval *offset, int type TSRMLS_DC)
 static void write_dimension(zval *object, zval *offset, zval *value TSRMLS_DC)
 {
 	zval *proxied_value, *o = offset;
-	php_property_proxy_object_t *obj = zend_object_store_get_object(object TSRMLS_CC);
 
 	if ((proxied_value = get_proxied_value(object TSRMLS_CC))) {
 		convert_to_array(proxied_value);
