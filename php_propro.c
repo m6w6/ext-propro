@@ -322,8 +322,6 @@ static zval *read_dimension(zval *object, zval *offset, int type TSRMLS_DC)
 			set_proxied_value(&object, proxied_value TSRMLS_CC);
 		}
 
-		//add_assoc_null_ex(proxied_value, Z_STRVAL_P(o), Z_STRLEN_P(o) + 1);
-
 		proxy = php_property_proxy_init(proxied_value, Z_STRVAL_P(o), Z_STRLEN_P(o) TSRMLS_CC);
 		zval_ptr_dtor(&proxied_value);
 		MAKE_STD_ZVAL(value);
