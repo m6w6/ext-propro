@@ -43,13 +43,17 @@ typedef struct php_property_proxy_object {
 	struct php_property_proxy_object *parent;
 } php_property_proxy_object_t;
 
-PHP_PROPRO_API php_property_proxy_t *php_property_proxy_init(zval *container, const char *member_str, size_t member_len TSRMLS_DC);
+PHP_PROPRO_API php_property_proxy_t *php_property_proxy_init(zval *container,
+		const char *member_str, size_t member_len TSRMLS_DC);
 PHP_PROPRO_API void php_property_proxy_free(php_property_proxy_t **proxy);
 
 PHP_PROPRO_API zend_class_entry *php_property_proxy_get_class_entry(void);
 
-PHP_PROPRO_API zend_object_value php_property_proxy_object_new(zend_class_entry *ce TSRMLS_DC);
-PHP_PROPRO_API zend_object_value php_property_proxy_object_new_ex(zend_class_entry *ce, php_property_proxy_t *proxy, php_property_proxy_object_t **ptr TSRMLS_DC);
+PHP_PROPRO_API zend_object_value php_property_proxy_object_new(
+		zend_class_entry *ce TSRMLS_DC);
+PHP_PROPRO_API zend_object_value php_property_proxy_object_new_ex(
+		zend_class_entry *ce, php_property_proxy_t *proxy,
+		php_property_proxy_object_t **ptr TSRMLS_DC);
 
 #endif	/* PHP_PROPRO_H */
 
