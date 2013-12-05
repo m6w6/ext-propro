@@ -30,7 +30,7 @@ typedef int STATUS;
 			(copy_ctor_func_t) zval_add_ref, NULL, sizeof(zval*))
 #endif
 
-PHP_PROPRO_API php_property_proxy_t *php_property_proxy_init(zval *container,
+php_property_proxy_t *php_property_proxy_init(zval *container,
 		const char *member_str, size_t member_len TSRMLS_DC)
 {
 	php_property_proxy_t *proxy = ecalloc(1, sizeof(*proxy));
@@ -43,7 +43,7 @@ PHP_PROPRO_API php_property_proxy_t *php_property_proxy_init(zval *container,
 	return proxy;
 }
 
-PHP_PROPRO_API void php_property_proxy_free(php_property_proxy_t **proxy)
+void php_property_proxy_free(php_property_proxy_t **proxy)
 {
 	if (*proxy) {
 		zval_ptr_dtor(&(*proxy)->container);
@@ -56,13 +56,12 @@ PHP_PROPRO_API void php_property_proxy_free(php_property_proxy_t **proxy)
 static zend_class_entry *php_property_proxy_class_entry;
 static zend_object_handlers php_property_proxy_object_handlers;
 
-PHP_PROPRO_API zend_class_entry *php_property_proxy_get_class_entry(void)
+zend_class_entry *php_property_proxy_get_class_entry(void)
 {
 	return php_property_proxy_class_entry;
 }
 
-PHP_PROPRO_API zend_object_value php_property_proxy_object_new(
-		zend_class_entry *ce TSRMLS_DC)
+zend_object_value php_property_proxy_object_new(zend_class_entry *ce TSRMLS_DC)
 {
 	return php_property_proxy_object_new_ex(ce, NULL, NULL TSRMLS_CC);
 }
@@ -87,9 +86,8 @@ static void php_property_proxy_object_free(void *object TSRMLS_DC)
 	efree(o);
 }
 
-PHP_PROPRO_API zend_object_value php_property_proxy_object_new_ex(
-		zend_class_entry *ce, php_property_proxy_t *proxy,
-		php_property_proxy_object_t **ptr TSRMLS_DC)
+zend_object_value php_property_proxy_object_new_ex(zend_class_entry *ce,
+		php_property_proxy_t *proxy, php_property_proxy_object_t **ptr TSRMLS_DC)
 {
 	php_property_proxy_object_t *o;
 

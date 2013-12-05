@@ -19,9 +19,9 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>mike@php.net</email>
   <active>yes</active>
  </lead>
- <date>2013-08-12</date>
+ <date>2013-12-05</date>
  <version>
-  <release>1.0.0</release>
+  <release>1.0.1</release>
   <api>1.0.0</api>
  </version>
  <stability>
@@ -30,12 +30,13 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license>BSD, revised</license>
  <notes><![CDATA[
-* Stable release
+* Internals documentation at http://php.github.io/php/pecl-php-propro
 ]]></notes>
  <contents>
   <dir name="/">
    <file role="doc" name="CREDITS" />
    <file role="doc" name="LICENSE" />
+   <file role="doc" name="Doxyfile" />
    <file role="src" name="config.m4" />
    <file role="src" name="config.w32" />
    <file role="src" name="php_propro.h" />
