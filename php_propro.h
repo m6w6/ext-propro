@@ -32,6 +32,11 @@ extern zend_module_entry propro_module_entry;
 #	include <TSRM/TSRM.h>
 #endif
 
+#ifdef IS_UNDEF /* TODO: replace with version check */
+#define PHPNG
+#define zend_object_value zend_object
+#endif
+
 #endif
 
 /**
@@ -95,8 +100,10 @@ typedef struct php_property_proxy php_property_proxy_t;
  * ~~~~~~~~~~
  */
 struct php_property_proxy_object {
+#ifndef PHPNG
 	/** The std zend_object */
 	zend_object zo;
+#endif
 	/** The object value for easy zval creation */
 	zend_object_value zv;
 	/** The actual property proxy */

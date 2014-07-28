@@ -24,6 +24,12 @@ typedef int STATUS;
 
 #define DEBUG_PROPRO 0
 
+/* legacy */
+#ifdef PHPNG
+#	undef zval_ptr_dtor
+#	define zval_ptr_dtor(zpp) _zval_ptr_dtor(*(zpp) ZEND_FILE_LINE_CC)
+#endif
+
 #if PHP_VERSION_ID < 50400
 #	define object_properties_init(o, ce) \
 	zend_hash_copy(((zend_object *) o)->properties, &(ce->default_properties), \
@@ -78,8 +84,12 @@ static void php_property_proxy_object_free(void *object TSRMLS_DC)
 		php_property_proxy_free(&o->proxy);
 	}
 	if (o->parent) {
+#ifdef PHPNG
+		zend_objects_store_del(&o->parent->zv);
+#else
 		zend_objects_store_del_ref_by_handle_ex(o->parent->zv.handle,
 				o->parent->zv.handlers TSRMLS_CC);
+#endif
 		o->parent = NULL;
 	}
 	zend_object_std_dtor((zend_object *) o TSRMLS_CC);
@@ -391,6 +401,21 @@ static int has_dimension(zval *object, zval *offset, int check_empty TSRMLS_DC)
 
 		convert_to_string_ex(&o);
 
+#ifdef PHPNG
+		if (Z_TYPE_P(proxied_value) == IS_ARRAY) {
+			zval *zentry = zend_symtable_find(Z_ARRVAL_P(proxied_value), Z_STR_P(o));
+
+			if (!zentry) {
+				exists = 0;
+			} else {
+				if (check_empty) {
+					exists = Z_TYPE_PP(zentry) != IS_NULL;
+				} else {
+					exists = 1;
+				}
+			}
+		}
+#else
 		if (Z_TYPE_P(proxied_value) == IS_ARRAY) {
 			zval **zentry;
 			STATUS rv = zend_symtable_find(Z_ARRVAL_P(proxied_value), Z_STRVAL_P(o), Z_STRLEN_P(o) + 1, (void *) &zentry);
@@ -409,6 +434,7 @@ static int has_dimension(zval *object, zval *offset, int check_empty TSRMLS_DC)
 		if (o != offset) {
 			zval_ptr_dtor(&o);
 		}
+#endif
 	}
 
 	debug_propro(-1, "dim_exists", object, offset, NULL TSRMLS_CC);
@@ -437,6 +463,14 @@ static void write_dimension(zval *object, zval *offset, zval *value TSRMLS_DC)
 	}
 	Z_ADDREF_P(value);
 
+#ifdef PHPNG
+	if (o) {
+		convert_to_string_ex(o);
+		zend_symtable_update(Z_ARRVAL_P(proxied_value), Z_STR_P(o), value);
+	} else {
+		zend_hash_next_index_insert(Z_ARRVAL_P(proxied_value), value);
+	}
+#else
 	if (o) {
 		convert_to_string_ex(&o);
 		zend_symtable_update(Z_ARRVAL_P(proxied_value), Z_STRVAL_P(o),
@@ -449,6 +483,7 @@ static void write_dimension(zval *object, zval *offset, zval *value TSRMLS_DC)
 	if (o && o != offset) {
 		zval_ptr_dtor(&o);
 	}
+#endif
 
 	set_proxied_value(&object, proxied_value TSRMLS_CC);
 
@@ -470,9 +505,12 @@ static void unset_dimension(zval *object, zval *offset TSRMLS_DC)
 		STATUS rv;
 
 		convert_to_string_ex(&o);
+#ifdef PHPNG
+		rv = zend_symtable_del(Z_ARRVAL_P(proxied_value), Z_STR_P(o));
+#else
 		rv = zend_symtable_del(Z_ARRVAL_P(proxied_value), Z_STRVAL_P(o),
 				Z_STRLEN_P(o) + 1);
-
+#endif
 		if (SUCCESS == rv) {
 			set_proxied_value(&object, proxied_value TSRMLS_CC);
 		}
@@ -524,8 +562,7 @@ static PHP_MINIT_FUNCTION(propro)
 
 	INIT_NS_CLASS_ENTRY(ce, "php", "PropertyProxy",
 			php_property_proxy_method_entry);
-	php_property_proxy_class_entry = zend_register_internal_class_ex(&ce, NULL,
-			NULL TSRMLS_CC);
+	php_property_proxy_class_entry = zend_register_internal_class(&ce TSRMLS_CC);
 	php_property_proxy_class_entry->create_object =
 			php_property_proxy_object_new;
 	php_property_proxy_class_entry->ce_flags |= ZEND_ACC_FINAL_CLASS;
