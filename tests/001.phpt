@@ -22,7 +22,9 @@ $a = $c->anon;
 
 var_dump($c);
 
+echo "set\n";
 $a = 123; 
+echo "get\n";
 echo $a,"\n";
 
 $p["foo"] = 123;
@@ -40,6 +42,8 @@ object(c)#%d (2) {
   ["anon":"c":private]=>
   NULL
 }
+set
+get
 123
 object(c)#%d (2) {
   ["prop":"c":private]=>

@@ -18,7 +18,7 @@
 extern zend_module_entry propro_module_entry;
 #define phpext_propro_ptr &propro_module_entry
 
-#define PHP_PROPRO_VERSION "1.0.1"
+#define PHP_PROPRO_VERSION "2.0.0dev"
 
 #ifdef PHP_WIN32
 #	define PHP_PROPRO_API __declspec(dllexport)
@@ -32,9 +32,8 @@ extern zend_module_entry propro_module_entry;
 #	include <TSRM/TSRM.h>
 #endif
 
-#ifdef IS_UNDEF /* TODO: replace with version check */
-#define PHPNG
-#define zend_object_value zend_object
+#if PHP_VERSION_ID >= 70000
+#	define PHPNG
 #endif
 
 #endif
@@ -46,11 +45,9 @@ extern zend_module_entry propro_module_entry;
  */
 struct php_property_proxy {
 	/** The container holding the property */
-	zval *container;
+	zval container;
 	/** The name of the proxied property */
-	char *member_str;
-	/** The length of the name */
-	size_t member_len;
+	zend_string *member;
 };
 typedef struct php_property_proxy php_property_proxy_t;
 
@@ -100,16 +97,12 @@ typedef struct php_property_proxy php_property_proxy_t;
  * ~~~~~~~~~~
  */
 struct php_property_proxy_object {
-#ifndef PHPNG
 	/** The std zend_object */
 	zend_object zo;
-#endif
-	/** The object value for easy zval creation */
-	zend_object_value zv;
 	/** The actual property proxy */
 	php_property_proxy_t *proxy;
-	/** A reference to any parent property proxy object */
-	struct php_property_proxy_object *parent;
+	/** Any parent property proxy object */
+	zval parent;
 };
 typedef struct php_property_proxy_object php_property_proxy_object_t;
 
@@ -120,12 +113,11 @@ typedef struct php_property_proxy_object php_property_proxy_object_t;
  * proxied property with name \a member_str of \a container.
  *
  * @param container the container holding the property
- * @param member_str the name of the proxied property
- * @param member_len the length of the name
+ * @param member the name of the proxied property
  * @return a new property proxy
  */
 PHP_PROPRO_API php_property_proxy_t *php_property_proxy_init(zval *container,
-		const char *member_str, size_t member_len TSRMLS_DC);
+		zend_string *member TSRMLS_DC);
 
 /**
  * Destroy and free a property proxy.
@@ -141,25 +133,6 @@ PHP_PROPRO_API void php_property_proxy_free(php_property_proxy_t **proxy);
  * @return the class entry pointer
  */
 PHP_PROPRO_API zend_class_entry *php_property_proxy_get_class_entry(void);
-
-/**
- * Instantiate a new php\\PropertyProxy
- * @param ce the property proxy or derived class entry
- * @return the zval object value
- */
-PHP_PROPRO_API zend_object_value php_property_proxy_object_new(
-		zend_class_entry *ce TSRMLS_DC);
-
-/**
- * Instantiate a new php\\PropertyProxy with \a proxy
- * @param ce the property proxy or derived class entry
- * @param proxy the internal property proxy
- * @param ptr a pointer to store the resulting property proxy object
- * @return the zval object value
- */
-PHP_PROPRO_API zend_object_value php_property_proxy_object_new_ex(
-		zend_class_entry *ce, php_property_proxy_t *proxy,
-		php_property_proxy_object_t **ptr TSRMLS_DC);
 
 #endif	/* PHP_PROPRO_H */
 
