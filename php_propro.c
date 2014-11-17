@@ -20,7 +20,7 @@
 
 #include "php_propro.h"
 
-#define DEBUG_PROPRO 1
+#define DEBUG_PROPRO 0
 
 static inline zval *get_referenced_zval(zval *ref)
 {
@@ -456,8 +456,11 @@ static void write_dimension(zval *object, zval *offset, zval *value TSRMLS_DC)
 	get_proxied_value(object, &proxied_value TSRMLS_CC);
 
 	if (!Z_ISUNDEF(proxied_value)) {
-		convert_to_array(&proxied_value);
-		Z_ADDREF(proxied_value);
+		if (Z_TYPE(proxied_value) == IS_ARRAY) {
+			Z_ADDREF(proxied_value);
+		} else {
+			convert_to_array(&proxied_value);
+		}
 	} else {
 		array_init(&proxied_value);
 	}
