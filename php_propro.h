@@ -32,10 +32,6 @@ extern zend_module_entry propro_module_entry;
 #	include <TSRM/TSRM.h>
 #endif
 
-#if PHP_VERSION_ID >= 70000
-#	define PHPNG
-#endif
-
 #endif
 
 /**
