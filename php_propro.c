@@ -156,9 +156,9 @@ static php_property_proxy_object_t *new_propro(zend_class_entry *ce,
 		ce = php_property_proxy_class_entry;
 	}
 
-	o = ecalloc(1, sizeof(*o) + sizeof(zval) * ce->default_properties_count);
-	zend_object_std_init((zend_object *) o, ce TSRMLS_CC);
-	object_properties_init((zend_object *) o, ce);
+	o = ecalloc(1, sizeof(*o) + sizeof(zval) * (ce->default_properties_count - 1));
+	zend_object_std_init(&o->zo, ce TSRMLS_CC);
+	object_properties_init(&o->zo, ce);
 
 	o->proxy = proxy;
 	o->zo.handlers = &php_property_proxy_object_handlers;
@@ -170,12 +170,12 @@ static php_property_proxy_object_t *new_propro(zend_class_entry *ce,
 
 static zend_object *create_obj(zend_class_entry *ce TSRMLS_DC)
 {
-	return (zend_object *) new_propro(ce, NULL TSRMLS_CC);
+	return &new_propro(ce, NULL TSRMLS_CC)->zo;
 }
 
 static void destroy_obj(zend_object *object TSRMLS_DC)
 {
-	php_property_proxy_object_t *o = (php_property_proxy_object_t *) object;
+	php_property_proxy_object_t *o = PHP_PROPRO_PTR(object);
 
 	debug_propro(0, "dtor", o, NULL, NULL TSRMLS_CC);
 
@@ -197,7 +197,7 @@ static inline php_property_proxy_object_t *get_propro(zval *object)
 
 	EMPTY_SWITCH_DEFAULT_CASE();
 	}
-	return (php_property_proxy_object_t *) Z_OBJ_P(object);
+	return PHP_PROPRO_PTR(Z_OBJ_P(object));
 }
 
 static inline zend_bool got_value(zval *container, zval *value TSRMLS_DC)
@@ -393,7 +393,7 @@ static zval *read_dimension(zval *object, zval *offset, int type, zval *return_v
 
 		proxy_obj = new_propro(NULL, proxy TSRMLS_CC);
 		ZVAL_COPY(&proxy_obj->parent, object);
-		RETVAL_OBJ((zend_object *) proxy_obj);
+		RETVAL_OBJ(&proxy_obj->zo);
 	}
 
 	if (o && o != offset) {
@@ -558,10 +558,11 @@ static PHP_MINIT_FUNCTION(propro)
 			php_property_proxy_method_entry);
 	php_property_proxy_class_entry = zend_register_internal_class(&ce TSRMLS_CC);
 	php_property_proxy_class_entry->create_object =	create_obj;
-	php_property_proxy_class_entry->ce_flags |= ZEND_ACC_FINAL_CLASS;
+	php_property_proxy_class_entry->ce_flags |= ZEND_ACC_FINAL;
 
 	memcpy(&php_property_proxy_object_handlers, zend_get_std_object_handlers(),
 			sizeof(zend_object_handlers));
+	php_property_proxy_object_handlers.offset = XtOffsetOf(php_property_proxy_object_t, zo);
 	php_property_proxy_object_handlers.dtor_obj = destroy_obj;
 	php_property_proxy_object_handlers.set = set_proxied_value;
 	php_property_proxy_object_handlers.get = get_proxied_value;

@@ -32,7 +32,9 @@ extern zend_module_entry propro_module_entry;
 #	include <TSRM/TSRM.h>
 #endif
 
-#endif
+#define PHP_PROPRO_PTR(zo) (void*)(((char*)(zo))-(zo)->handlers->offset)
+
+#endif /* DOXYGEN */
 
 /**
  * The internal property proxy.
@@ -93,12 +95,12 @@ typedef struct php_property_proxy php_property_proxy_t;
  * ~~~~~~~~~~
  */
 struct php_property_proxy_object {
-	/** The std zend_object */
-	zend_object zo;
 	/** The actual property proxy */
 	php_property_proxy_t *proxy;
 	/** Any parent property proxy object */
 	zval parent;
+	/** The std zend_object */
+	zend_object zo;
 };
 typedef struct php_property_proxy_object php_property_proxy_object_t;
 
