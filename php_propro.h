@@ -115,7 +115,7 @@ typedef struct php_property_proxy_object php_property_proxy_object_t;
  * @return a new property proxy
  */
 PHP_PROPRO_API php_property_proxy_t *php_property_proxy_init(zval *container,
-		zend_string *member TSRMLS_DC);
+		zend_string *member);
 
 /**
  * Destroy and free a property proxy.
