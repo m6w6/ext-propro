@@ -57,40 +57,28 @@ typedef struct php_property_proxy php_property_proxy_t;
  *
  * Example:
  * ~~~~~~~~~~{.c}
- * static zval *my_read_prop(zval *object, zval *member, int type, zend_literal *key TSRMLS_DC)
+ * static zval *my_read_prop(zval *object, zval *member, int type, void **cache_slot, zval *tmp)
  * {
- *     my_object_t *obj = zend_object_store_get_object(object TSRMLS_CC);
- *     my_prophandler_t *handler;
- *     zval *return_value, *copy = my_cast(IS_STRING, member);
+ *    zval *return_value;
+ *    zend_string *member_name = zval_get_string(member);
+ *    my_prophandler_t *handler = my_get_prophandler(member_name);
  *
- *     if (SUCCESS == my_get_prophandler(Z_STRVAL_P(copy), Z_STRLEN_P(copy), &handler)) {
- *         ALLOC_ZVAL(return_value);
- *         Z_SET_REFCOUNT_P(return_value, 0);
- *         Z_UNSET_ISREF_P(return_value);
+ *    if (!handler || type == BP_VAR_R || type == BP_VAR_IS) {
+ *    	return_value = zend_get_std_object_handlers()->read_property(object, member, type, cache_slot, tmp);
  *
- *         if (type == BP_VAR_R) {
- *             handler->read(obj, return_value TSRMLS_CC);
- *         } else {
- *             //
- *             // This is the interesting part
- *             //
- *             php_property_proxy_t *proxy;
- *             zend_object_value proxy_ov;
- *             zend_class_entry *proxy_ce;
+ *    	if (handler) {
+ *    		handler->read(object, tmp);
  *
- *             proxy = php_property_proxy_init(object, Z_STRVAL_P(copy), Z_STRLEN_P(copy) TSRMLS_CC);
- *             proxy_ce = php_property_proxy_get_class_entry();
- *             proxy_ov = php_property_proxy_object_new_ex(proxy_ce, proxy, NULL TSRMLS_CC);
- *             RETVAL_OBJVAL(proxy_ov, 0);
- *         }
- *     } else {
- *         zend_object_handlers *oh = zend_get_std_object_handlers();
- *         return_value = oh->read_property(object, member, type, key TSRMLS_CC);
- *     }
+ *    		zval_ptr_dtor(return_value);
+ *    		ZVAL_COPY_VALUE(return_value, tmp);
+ *    	}
+ *    } else {
+ *    	return_value = php_property_proxy_zval(object, member_name);
+ *    }
  *
- *     zval_ptr_dtor(&copy);
+ *    zend_string_release(member_name);
  *
- *     return return_value;
+ *    return return_value;
  * }
  * ~~~~~~~~~~
  */
@@ -99,10 +87,29 @@ struct php_property_proxy_object {
 	php_property_proxy_t *proxy;
 	/** Any parent property proxy object */
 	zval parent;
+	/** Bond, James Bond */
+	zval myself;
 	/** The std zend_object */
 	zend_object zo;
 };
 typedef struct php_property_proxy_object php_property_proxy_object_t;
+
+PHP_PROPRO_API php_property_proxy_object_t *php_property_proxy_object_new_ex(
+		zend_class_entry *ce, php_property_proxy_t *proxy);
+
+PHP_PROPRO_API zend_object *php_property_proxy_object_new(zend_class_entry *ce);
+
+/**
+ * Create a property proxy as zval suitable to return from the property handler.
+ *
+ * Wrapper for php_property_proxy_init() and php_property_proxy_object_new_ex()
+ * for use within a custom property handler.
+ *
+ * @param container the container holding the property
+ * @param member the name of the proxied property
+ * @return the new property proxy as zval
+ */
+PHP_PROPRO_API zval *php_property_proxy_zval(zval *container, zend_string *member);
 
 /**
  * Create a property proxy
