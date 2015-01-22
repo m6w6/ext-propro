@@ -43,7 +43,7 @@ php_property_proxy_t *php_property_proxy_init(zval *container, zend_string *memb
 void php_property_proxy_free(php_property_proxy_t **proxy)
 {
 	if (*proxy) {
-		zval_ptr_dtor( &(*proxy)->container);
+		zval_ptr_dtor(&(*proxy)->container);
 		zend_string_release((*proxy)->member);
 		efree(*proxy);
 		*proxy = NULL;
@@ -59,7 +59,6 @@ zval *php_property_proxy_zval(zval *container, zend_string *member)
 	proxy_obj = php_property_proxy_object_new_ex(NULL, proxy);
 
 	ZVAL_OBJ(&proxy_obj->myself, &proxy_obj->zo);
-	Z_ADDREF(proxy_obj->myself);
 	return &proxy_obj->myself;
 }
 
