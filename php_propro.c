@@ -354,7 +354,7 @@ static void set_proxied_value(zval *object, zval *value)
 static zval *read_dimension(zval *object, zval *offset, int type, zval *return_value)
 {
 	zval proxied_value;
-	zval *o = offset;
+	zend_string *member = offset ? zval_get_string(offset) : NULL;
 
 	debug_propro(1, type == BP_VAR_R ? "dim_read" : "dim_read_ref",
 			get_propro(object), offset, NULL);
@@ -362,21 +362,16 @@ static zval *read_dimension(zval *object, zval *offset, int type, zval *return_v
 	ZVAL_UNDEF(&proxied_value);
 	get_proxied_value(object, &proxied_value);
 
-	if (o) {
-		convert_to_string_ex(o);
-	}
-
-	if (BP_VAR_R == type && o && !Z_ISUNDEF(proxied_value)) {
+	if (BP_VAR_R == type && member && !Z_ISUNDEF(proxied_value)) {
 		if (Z_TYPE(proxied_value) == IS_ARRAY) {
 			zval *hash_value = zend_symtable_find(Z_ARRVAL(proxied_value),
-					Z_STR_P(o));
+					member);
 
 			if (hash_value) {
 				RETVAL_ZVAL(hash_value, 1, 0);
 			}
 		}
 	} else {
-		zend_string *member;
 		php_property_proxy_t *proxy;
 		php_property_proxy_object_t *proxy_obj;
 
@@ -388,9 +383,7 @@ static zval *read_dimension(zval *object, zval *offset, int type, zval *return_v
 			set_proxied_value(object, &proxied_value);
 		}
 
-		if (o) {
-			member = Z_STR_P(o);
-		} else {
+		if (!member) {
 			member = zend_long_to_str(zend_hash_next_free_element(
 					Z_ARRVAL(proxied_value)));
 		}
@@ -398,17 +391,13 @@ static zval *read_dimension(zval *object, zval *offset, int type, zval *return_v
 		proxy = php_property_proxy_init(&proxied_value, member);
 		zval_ptr_dtor(&proxied_value);
 
-		if (!o) {
-			zend_string_release(member);
-		}
-
 		proxy_obj = php_property_proxy_object_new_ex(NULL, proxy);
 		ZVAL_COPY(&proxy_obj->parent, object);
 		RETVAL_OBJ(&proxy_obj->zo);
 	}
 
-	if (o && o != offset) {
-		zval_ptr_dtor(o);
+	if (member) {
+		zend_string_release(member);
 	}
 
 	debug_propro(-1, type == BP_VAR_R ? "dim_read" : "dim_read_ref",
