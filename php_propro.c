@@ -247,7 +247,7 @@ static zval *get_parent_proxied_value(zval *object, zval *return_value)
 
 static zval *get_proxied_value(zval *object, zval *return_value)
 {
-	zval *hash_value, *ref;
+	zval *hash_value, *ref, prop_tmp;
 	php_property_proxy_object_t *obj;
 
 	obj = get_propro(object);
@@ -271,7 +271,7 @@ static zval *get_proxied_value(zval *object, zval *return_value)
 		switch (Z_TYPE_P(ref)) {
 		case IS_OBJECT:
 			RETVAL_ZVAL(zend_read_property(Z_OBJCE_P(ref), ref,
-					obj->proxy->member->val, obj->proxy->member->len, 0),
+					obj->proxy->member->val, obj->proxy->member->len, 0, &prop_tmp),
 					0, 0);
 			break;
 
