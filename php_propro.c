@@ -20,7 +20,12 @@
 
 #include "php_propro.h"
 
-typedef int STATUS;
+#if PHP_VERSION_ID < 50500
+typedef enum {
+	SUCCESS = 0,
+	FAILURE = -1
+} ZEND_RESULT_CODE;
+#endif
 
 #define DEBUG_PROPRO 0
 
@@ -182,7 +187,7 @@ static void debug_propro(int inout, const char *f, zval *object, zval *offset,
 static zval *get_parent_proxied_value(zval *object TSRMLS_DC);
 static zval *get_proxied_value(zval *object TSRMLS_DC);
 static zval *read_dimension(zval *object, zval *offset, int type TSRMLS_DC);
-static STATUS cast_proxied_value(zval *object, zval *return_value,
+static ZEND_RESULT_CODE cast_proxied_value(zval *object, zval *return_value,
 		int type TSRMLS_DC);
 static void write_dimension(zval *object, zval *offset, zval *value TSRMLS_DC);
 static void set_proxied_value(zval **object, zval *value TSRMLS_DC);
@@ -214,7 +219,7 @@ static zval *get_proxied_value(zval *object TSRMLS_DC)
 {
 	zval **hash_value, *value = NULL;
 	php_property_proxy_object_t *obj;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	obj = zend_object_store_get_object(object TSRMLS_CC);
 	debug_propro(1, "get", object, NULL, NULL TSRMLS_CC);
@@ -253,7 +258,7 @@ static zval *get_proxied_value(zval *object TSRMLS_DC)
 	return value;
 }
 
-static STATUS cast_proxied_value(zval *object, zval *return_value,
+static ZEND_RESULT_CODE cast_proxied_value(zval *object, zval *return_value,
 		int type TSRMLS_DC)
 {
 	zval *proxied_value;
@@ -332,7 +337,7 @@ static zval *read_dimension(zval *object, zval *offset, int type TSRMLS_DC)
 	if (BP_VAR_R == type && proxied_value) {
 		if (Z_TYPE_P(proxied_value) == IS_ARRAY) {
 			zval **hash_value;
-			STATUS rv = zend_symtable_find(Z_ARRVAL_P(proxied_value),
+			ZEND_RESULT_CODE rv = zend_symtable_find(Z_ARRVAL_P(proxied_value),
 					Z_STRVAL_P(o), Z_STRLEN_P(o), (void *) &hash_value);
 
 			if (SUCCESS == rv) {
@@ -393,7 +398,7 @@ static int has_dimension(zval *object, zval *offset, int check_empty TSRMLS_DC)
 
 		if (Z_TYPE_P(proxied_value) == IS_ARRAY) {
 			zval **zentry;
-			STATUS rv = zend_symtable_find(Z_ARRVAL_P(proxied_value), Z_STRVAL_P(o), Z_STRLEN_P(o) + 1, (void *) &zentry);
+			ZEND_RESULT_CODE rv = zend_symtable_find(Z_ARRVAL_P(proxied_value), Z_STRVAL_P(o), Z_STRLEN_P(o) + 1, (void *) &zentry);
 
 			if (SUCCESS != rv) {
 				exists = 0;
@@ -467,7 +472,7 @@ static void unset_dimension(zval *object, zval *offset TSRMLS_DC)
 
 	if (proxied_value && Z_TYPE_P(proxied_value) == IS_ARRAY) {
 		zval *o = offset;
-		STATUS rv;
+		ZEND_RESULT_CODE rv;
 
 		convert_to_string_ex(&o);
 		rv = zend_symtable_del(Z_ARRVAL_P(proxied_value), Z_STRVAL_P(o),
