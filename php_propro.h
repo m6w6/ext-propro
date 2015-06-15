@@ -87,8 +87,6 @@ struct php_property_proxy_object {
 	php_property_proxy_t *proxy;
 	/** Any parent property proxy object */
 	zval parent;
-	/** Bond, James Bond */
-	zval myself;
 	/** The std zend_object */
 	zend_object zo;
 };
@@ -98,18 +96,6 @@ PHP_PROPRO_API php_property_proxy_object_t *php_property_proxy_object_new_ex(
 		zend_class_entry *ce, php_property_proxy_t *proxy);
 
 PHP_PROPRO_API zend_object *php_property_proxy_object_new(zend_class_entry *ce);
-
-/**
- * Create a property proxy as zval suitable to return from the property handler.
- *
- * Wrapper for php_property_proxy_init() and php_property_proxy_object_new_ex()
- * for use within a custom property handler.
- *
- * @param container the container holding the property
- * @param member the name of the proxied property
- * @return the new property proxy as zval
- */
-PHP_PROPRO_API zval *php_property_proxy_zval(zval *container, zend_string *member);
 
 /**
  * Create a property proxy

@@ -50,18 +50,6 @@ void php_property_proxy_free(php_property_proxy_t **proxy)
 	}
 }
 
-zval *php_property_proxy_zval(zval *container, zend_string *member)
-{
-	php_property_proxy_t *proxy;
-	php_property_proxy_object_t *proxy_obj;
-
-	proxy = php_property_proxy_init(container, member);
-	proxy_obj = php_property_proxy_object_new_ex(NULL, proxy);
-
-	ZVAL_OBJ(&proxy_obj->myself, &proxy_obj->zo);
-	return &proxy_obj->myself;
-}
-
 static zend_class_entry *php_property_proxy_class_entry;
 static zend_object_handlers php_property_proxy_object_handlers;
 
