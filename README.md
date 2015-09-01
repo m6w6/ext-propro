@@ -20,4 +20,4 @@ Also, watch out for self-installing [pharext](https://github.com/m6w6/pharext) p
 
 ## Documentation
 
-Userland documentation can be found at http://devel-m6w6.rhcloud.com/mdref/propro
+Userland documentation can be found at https://mdref.m6w6.name/propro
