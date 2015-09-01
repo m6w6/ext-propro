@@ -40,6 +40,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
    <file role="src" name="config.m4" />
    <file role="src" name="config.w32" />
    <file role="src" name="php_propro.h" />
+   <file role="src" name="php_propro_api.h" />
    <file role="src" name="php_propro.c" />
    <dir name="tests">
     <file role="test" name="001.phpt" />
@@ -50,7 +51,9 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <dependencies>
   <required>
    <php>
-    <min>5.3</min>
+    <min>5.3.0</min>
+    <max>7.0.0</max>
+    <exclude>7.0.0</exclude>
    </php>
    <pearinstaller>
     <min>1.4.0</min>
@@ -58,8 +61,6 @@ http://pear.php.net/dtd/package-2.0.xsd">
   </required>
  </dependencies>
  <providesextension>propro</providesextension>
- <extsrcrelease>
-  <configureoption default="yes" name="enable-propro" prompt="whether to enable property proxy support" />
- </extsrcrelease>
+ <extsrcrelease/>
 </package>
 
