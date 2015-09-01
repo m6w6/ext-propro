@@ -21,8 +21,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </lead>
  <date>2013-12-05</date>
  <version>
-  <release>1.0.1</release>
-  <api>1.0.0</api>
+  <release>2.0.0-dev</release>
+  <api>2.0.0</api>
  </version>
  <stability>
   <release>stable</release>
@@ -30,7 +30,6 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license>BSD, revised</license>
  <notes><![CDATA[
-* Internals documentation at http://php.github.io/php/pecl-php-propro
 ]]></notes>
  <contents>
   <dir name="/">
@@ -45,15 +44,14 @@ http://pear.php.net/dtd/package-2.0.xsd">
    <dir name="tests">
     <file role="test" name="001.phpt" />
     <file role="test" name="002.phpt" />
+    <file role="test" name="003.phpt" />
    </dir>
   </dir>
  </contents>
  <dependencies>
   <required>
    <php>
-    <min>5.3.0</min>
-    <max>7.0.0</max>
-    <exclude>7.0.0</exclude>
+    <min>7.0.0</min>
    </php>
    <pearinstaller>
     <min>1.4.0</min>
