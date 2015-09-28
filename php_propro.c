@@ -18,7 +18,7 @@
 #include <php.h>
 #include <ext/standard/info.h>
 
-#include "php_propro.h"
+#include "php_propro_api.h"
 
 #define DEBUG_PROPRO 0
 
