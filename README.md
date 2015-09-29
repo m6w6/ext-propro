@@ -1,6 +1,6 @@
 # ext-propro
 
-[![Build Status](https://travis-ci.org/m6w6/ext-propro.svg?branch=master)](https://travis-ci.org/m6w6/ext-propro)
+[![Build Status](https://travis-ci.org/m6w6/ext-propro.svg?branch=R_1_0)](https://travis-ci.org/m6w6/ext-propro)
 
 Property Proxy
 
