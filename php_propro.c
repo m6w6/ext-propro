@@ -18,9 +18,11 @@
 #include <php.h>
 #include <ext/standard/info.h>
 
-#include "php_propro.h"
+#include "php_propro_api.h"
 
 #if PHP_VERSION_ID < 50500
+#undef SUCCESS
+#undef FAILURE
 typedef enum {
 	SUCCESS = 0,
 	FAILURE = -1
