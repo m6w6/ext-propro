@@ -3,8 +3,8 @@
 *~
 /*.tgz
 /.deps
-/*.lo
-/*.la
+*.lo
+*.la
 /config.[^wm]*
 /configure*
 /lib*
@@ -21,3 +21,5 @@
 /autom4te*
 /.dep.inc
 run-tests.php
+.libs/
+/php_propro_api.h

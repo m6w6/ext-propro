@@ -1,0 +1,24 @@
+PHP_ARG_ENABLE(propro, whether to enable property proxy support,
+[  --enable-propro         Enable property proxy support])
+
+if test "$PHP_PROPRO" != "no"; then
+	PHP_PROPRO_SRCDIR=PHP_EXT_SRCDIR(propro)
+	PHP_PROPRO_BUILDDIR=PHP_EXT_BUILDDIR(propro)
+
+	PHP_ADD_INCLUDE($PHP_PROPRO_SRCDIR/src)
+	PHP_ADD_BUILD_DIR($PHP_PROPRO_BUILDDIR/src)
+
+	PHP_PROPRO_HEADERS=`(cd $PHP_PROPRO_SRCDIR/src && echo *.h)`
+	PHP_PROPRO_SOURCES=`(cd $PHP_PROPRO_SRCDIR && echo src/*.c)`
+
+	PHP_NEW_EXTENSION(propro, $PHP_PROPRO_SOURCES, $ext_shared)
+	PHP_INSTALL_HEADERS(ext/propro, php_propro.h $PHP_PROPRO_HEADERS)
+
+	PHP_SUBST(PHP_PROPRO_HEADERS)
+	PHP_SUBST(PHP_PROPRO_SOURCES)
+
+	PHP_SUBST(PHP_PROPRO_SRCDIR)
+	PHP_SUBST(PHP_PROPRO_BUILDDIR)
+
+	PHP_ADD_MAKEFILE_FRAGMENT
+fi

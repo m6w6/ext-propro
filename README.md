@@ -1,12 +1,15 @@
 # ext-propro
 
-[![Build Status](https://travis-ci.org/m6w6/ext-propro.svg?branch=R_1_0)](https://travis-ci.org/m6w6/ext-propro)
+[![Build Status](https://travis-ci.org/m6w6/ext-propro.svg?branch=v1.0.x)](https://travis-ci.org/m6w6/ext-propro)
 
-Property Proxy
+The "Property Proxy" extension provides a fairly transparent proxy for internal
+object properties hidden in custom non-zval implementations.
 
 ## Documentation
 
 See the [online markdown reference](https://mdref.m6w6.name/propro).
+
+Known issues are listed in [BUGS](./BUGS) and future ideas can be found in [TODO](./TODO).
 
 ## Installing
 
