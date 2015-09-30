@@ -35,7 +35,7 @@ typedef struct php_property_proxy php_property_proxy_t;
  * member accessible by reference from PHP userland.
  *
  * Example:
- * ~~~~~~~~~~{.c}
+ * \code{.c}
  * static zval *my_read_prop(zval *object, zval *member, int type, void **cache_slot, zval *tmp)
  * {
  *    zval *return_value;
@@ -59,7 +59,7 @@ typedef struct php_property_proxy php_property_proxy_t;
  *
  *    return return_value;
  * }
- * ~~~~~~~~~~
+ * \endcode
  */
 struct php_property_proxy_object {
 	/** The actual property proxy */
