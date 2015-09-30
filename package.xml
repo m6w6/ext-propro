@@ -35,18 +35,25 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <contents>
   <dir name="/">
    <file role="doc" name="AUTHORS"/>
+   <file role="doc" name="BUGS"/>
    <file role="doc" name="CONTRIBUTING.md"/>
    <file role="doc" name="CREDITS"/>
    <file role="doc" name="LICENSE"/>
    <file role="doc" name="README.md"/>
    <file role="doc" name="THANKS"/>
+   <file role="doc" name="TODO"/>
    <file role="src" name="config.m4"/>
+   <file role="src" name="config0.m4"/>
    <file role="src" name="config.w32" />
    <file role="doc" name="Doxyfile" />
    <file role="src" name="php_propro.h" />
-   <file role="src" name="php_propro_api.h" />
-   <file role="src" name="php_propro.c" />
-
+   <dir name="src">
+    <file role="src" name="php_propro_api.h"/>
+    <file role="src" name="php_propro_api.c"/>
+   </dir>
+   <dir name="scripts">
+    <file role="src" name="gen_travis_yml.php"/>
+   </dir>
    <dir name="tests">
     <file role="test" name="001.phpt" />
     <file role="test" name="002.phpt" />

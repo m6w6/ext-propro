@@ -2,8 +2,15 @@
 ARG_ENABLE("propro", "for propro support", "no");
 
 if (PHP_PROPRO == "yes") {
-		EXTENSION("propro", "php_propro.c");
+	var PHP_PROPRO_HEADERS=glob("src/*.h"), PHP_PROPRO_SOURCES=glob("src/*.c");
 
-		AC_DEFINE("HAVE_PROPRO", 1);
-		PHP_INSTALL_HEADERS("ext/propro", "php_propro.h");
+	EXTENSION("propro", PHP_PROPRO_SOURCES);
+	PHP_INSTALL_HEADERS("ext/propro", "php_propro.h");
+	for (var i=0; i<PHP_PROPRO_HEADERS.length; ++i) {
+		var basename = FSO.GetFileName(PHP_PROPRO_HEADERS[i]);
+		copy_and_subst(PHP_PROPRO_HEADERS[i], basename, []);
+		PHP_INSTALL_HEADERS("ext/propro", basename);
+	}
+
+	AC_DEFINE("HAVE_PROPRO", 1);
 }
