@@ -47,6 +47,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   <div id="navrow1" class="tabs">
     <ul class="tablist">
       <li class="current"><a href="index.html"><span>Main&#160;Page</span></a></li>
+      <li><a href="pages.html"><span>Related&#160;Pages</span></a></li>
       <li><a href="annotated.html"><span>Data&#160;Structures</span></a></li>
       <li><a href="files.html"><span>Files</span></a></li>
       <li>
@@ -101,7 +102,31 @@ $(document).ready(function(){initNavTree('index.html','');});
 <div class="title">Property proxy API Documentation</div>  </div>
 </div><!--header-->
 <div class="contents">
-</div><!-- contents -->
+<div class="textblock"><p><a href="https://travis-ci.org/m6w6/ext-propro">![Build Status](https://travis-ci.org/m6w6/ext-propro.svg?branch=master)</a></p>
+<p>The "Property Proxy" extension provides a fairly transparent proxy for internal object properties hidden in custom non-zval implementations.</p>
+<h2>Documentation</h2>
+<p>See the <a href="https://mdref.m6w6.name/propro">online markdown reference</a>.</p>
+<p>Known issues are listed in <a href="./BUGS">BUGS</a> and future ideas can be found in <a href="./TODO">TODO</a>.</p>
+<h2>Installing</h2>
+<h3>PECL</h3>
+<pre class="fragment">pecl install propro
+</pre><h3>PHARext</h3>
+<p>Watch out for <a href="https://replicator.pharext.org?propro">PECL replicates</a> and pharext packages attached to <a href="./releases">releases</a>.</p>
+<h3>Checkout</h3>
+<pre class="fragment">git clone github.com:m6w6/ext-propro
+cd ext-propro
+/path/to/phpize
+./configure --with-php-config=/path/to/php-config
+make
+sudo make install
+</pre><h2>ChangeLog</h2>
+<p>A comprehensive list of changes can be obtained from the <a href="https://pecl.php.net/package-changelog.php?package=propro">PECL website</a>.</p>
+<h2>License</h2>
+<p>ext-propro is licensed under the 2-Clause-BSD license, which can be found in the accompanying <a href="./LICENSE">LICENSE</a> file.</p>
+<h2>Contributing</h2>
+<p>All forms of contribution are welcome! Please see the bundled ./CONTRIBUTING.md "CONTRIBUTING" note for the general principles followed.</p>
+<p>The list of past and current contributors is maintained in <a href="./THANKS">THANKS</a>. </p>
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
