@@ -24,3 +24,4 @@ run-tests.php
 .libs/
 /php_propro_api.h
 /Doxyfile.bak
+!/Makefile.frag
