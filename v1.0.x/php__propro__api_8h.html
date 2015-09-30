@@ -213,17 +213,42 @@ The name of the proxied property. </td></tr>
 </div><div class="memdoc">
 <div class="textblock"><p>The userland object. </p>
 <p>Return an object instance of php\PropertyProxy to make your C-struct member accessible by reference from PHP userland.</p>
-<p>Example:</p><ul>
-<li><p class="startli">~~~~~~~~~~{.c} static zval *my_read_prop(zval *object, zval *member, int type, zend_literal *key TSRMLS_DC) { my_object_t *obj = zend_object_store_get_object(object TSRMLS_CC); my_prophandler_t *handler; zval *return_value, *copy = my_cast(IS_STRING, member);</p>
-<p class="startli">if (SUCCESS == my_get_prophandler(Z_STRVAL_P(copy), Z_STRLEN_P(copy), &amp;handler)) { ALLOC_ZVAL(return_value); Z_SET_REFCOUNT_P(return_value, 0); Z_UNSET_ISREF_P(return_value);</p>
-<p class="startli">if (type == BP_VAR_R) { handler-&gt;read(obj, return_value TSRMLS_CC); } else { // // This is the interesting part // php_property_proxy_t *proxy; zend_object_value proxy_ov; zend_class_entry *proxy_ce;</p>
-<p class="startli">proxy = php_property_proxy_init(object, Z_STRVAL_P(copy), Z_STRLEN_P(copy) TSRMLS_CC); proxy_ce = <a class="el" href="php__propro__api_8c.html#a15c4fce513dc952c575cd72332835aa4" title="Get the zend_class_entry of php\PropertyProxy. ">php_property_proxy_get_class_entry()</a>; proxy_ov = php_property_proxy_object_new_ex(proxy_ce, proxy, NULL TSRMLS_CC); RETVAL_OBJVAL(proxy_ov, 0); } } else { zend_object_handlers *oh = zend_get_std_object_handlers(); return_value = oh-&gt;read_property(object, member, type, key TSRMLS_CC); }</p>
-<p class="startli">zval_ptr_dtor(&amp;copy);</p>
-<p class="startli">return return_value; }</p>
-</li>
-<li>~~~~~~~~~~ </li>
-</ul>
-</div><div class="dynheader">
+<p>Example: </p><div class="fragment"><div class="line"><span class="keyword">static</span> zval *my_read_prop(zval *<span class="keywordtype">object</span>, zval *member, <span class="keywordtype">int</span> type, zend_literal *key TSRMLS_DC)</div>
+<div class="line">{</div>
+<div class="line">    my_object_t *obj = zend_object_store_get_object(<span class="keywordtype">object</span> TSRMLS_CC);</div>
+<div class="line">    my_prophandler_t *handler;</div>
+<div class="line">    zval *return_value, *copy = my_cast(IS_STRING, member);</div>
+<div class="line"></div>
+<div class="line">    <span class="keywordflow">if</span> (<a class="code" href="php__propro__api_8c.html#a7e00ad2b6e2b119af6feea77ddfcc7e1ac7f69f7c9e5aea9b8f54cf02870e2bf8">SUCCESS</a> == my_get_prophandler(Z_STRVAL_P(copy), Z_STRLEN_P(copy), &amp;handler)) {</div>
+<div class="line">        ALLOC_ZVAL(return_value);</div>
+<div class="line">        Z_SET_REFCOUNT_P(return_value, 0);</div>
+<div class="line">        Z_UNSET_ISREF_P(return_value);</div>
+<div class="line"></div>
+<div class="line">        <span class="keywordflow">if</span> (type == BP_VAR_R) {</div>
+<div class="line">            handler-&gt;read(obj, return_value TSRMLS_CC);</div>
+<div class="line">        } <span class="keywordflow">else</span> {</div>
+<div class="line">            <span class="comment">//</span></div>
+<div class="line">            <span class="comment">// This is the interesting part</span></div>
+<div class="line">            <span class="comment">//</span></div>
+<div class="line">            <a class="code" href="php__propro__api_8h.html#structphp__property__proxy">php_property_proxy_t</a> *<a class="code" href="php__propro__api_8h.html#a87b08fb8c8dd5a44bccfac6fb81d2103">proxy</a>;</div>
+<div class="line">            zend_object_value proxy_ov;</div>
+<div class="line">            zend_class_entry *proxy_ce;</div>
+<div class="line"></div>
+<div class="line">            proxy = <a class="code" href="php__propro__api_8c.html#a83d5ddbca9a25a062eded906182f205c">php_property_proxy_init</a>(<span class="keywordtype">object</span>, Z_STRVAL_P(copy), Z_STRLEN_P(copy) TSRMLS_CC);</div>
+<div class="line">            proxy_ce = <a class="code" href="php__propro__api_8c.html#a15c4fce513dc952c575cd72332835aa4">php_property_proxy_get_class_entry</a>();</div>
+<div class="line">            proxy_ov = <a class="code" href="php__propro__api_8c.html#a8972f05941efb141dd78c42bef70db2f">php_property_proxy_object_new_ex</a>(proxy_ce, proxy, NULL TSRMLS_CC);</div>
+<div class="line">            RETVAL_OBJVAL(proxy_ov, 0);</div>
+<div class="line">        }</div>
+<div class="line">    } <span class="keywordflow">else</span> {</div>
+<div class="line">        zend_object_handlers *oh = zend_get_std_object_handlers();</div>
+<div class="line">        return_value = oh-&gt;read_property(<span class="keywordtype">object</span>, member, type, key TSRMLS_CC);</div>
+<div class="line">    }</div>
+<div class="line"></div>
+<div class="line">    zval_ptr_dtor(&amp;copy);</div>
+<div class="line"></div>
+<div class="line">    <span class="keywordflow">return</span> return_value;</div>
+<div class="line">}</div>
+</div><!-- fragment --> </div><div class="dynheader">
 Collaboration diagram for php_property_proxy_object:</div>
 <div class="dyncontent">
 <div class="center"><img src="structphp__property__proxy__object__coll__graph.png" border="0" usemap="#php__property__proxy__object_coll__map" alt="Collaboration graph"/></div>
