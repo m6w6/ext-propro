@@ -37,7 +37,7 @@ typedef struct php_property_proxy php_property_proxy_t;
  * member accessible by reference from PHP userland.
  *
  * Example:
- * ~~~~~~~~~~{.c}
+ * \code{.c}
  * static zval *my_read_prop(zval *object, zval *member, int type, zend_literal *key TSRMLS_DC)
  * {
  *     my_object_t *obj = zend_object_store_get_object(object TSRMLS_CC);
@@ -73,7 +73,7 @@ typedef struct php_property_proxy php_property_proxy_t;
  *
  *     return return_value;
  * }
- * ~~~~~~~~~~
+ * \endcode
  */
 struct php_property_proxy_object {
 	/** The std zend_object */
