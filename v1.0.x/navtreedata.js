@@ -1,6 +1,7 @@
 var NAVTREE =
 [
   [ "Property proxy API", "index.html", [
+    [ "Contributor Code of Conduct", "md_CONTRIBUTING.html", null ],
     [ "Data Structures", "annotated.html", [
       [ "Data Structures", "annotated.html", "annotated_dup" ],
       [ "Data Structure Index", "classes.html", null ],

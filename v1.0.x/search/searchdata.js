@@ -1,14 +1,15 @@
 var indexSectionsWithContent =
 {
-  0: "cdfmopsz",
+  0: "cdfmoprsz",
   1: "p",
-  2: "p",
+  2: "cpr",
   3: "pz",
   4: "cmpz",
   5: "p",
   6: "z",
   7: "fs",
-  8: "dop"
+  8: "dop",
+  9: "c"
 };
 
 var indexSectionNames =
@@ -21,7 +22,8 @@ var indexSectionNames =
   5: "typedefs",
   6: "enums",
   7: "enumvalues",
-  8: "defines"
+  8: "defines",
+  9: "pages"
 };
 
 var indexSectionLabels =
@@ -34,6 +36,7 @@ var indexSectionLabels =
   5: "Typedefs",
   6: "Enumerations",
   7: "Enumerator",
-  8: "Macros"
+  8: "Macros",
+  9: "Pages"
 };
 
