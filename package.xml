@@ -19,18 +19,20 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>mike@php.net</email>
   <active>yes</active>
  </lead>
- <date>2013-12-05</date>
+ <date>2015-12-01</date>
  <version>
-  <release>2.0.0dev</release>
+  <release>2.0.0RC1</release>
   <api>2.0.0</api>
  </version>
  <stability>
-  <release>stable</release>
+  <release>beta</release>
   <api>stable</api>
  </stability>
  <license uri="http://copyfree.org/content/standard/licenses/2bsd/license.txt">BSD-2-Clause</license>
  <notes><![CDATA[
-*
+* Internals documentation at http://m6w6.github.io/ext-propro/master/
+* Travis support
+* PHP7 compatible version
 ]]></notes>
  <contents>
   <dir name="/">
@@ -75,4 +77,3 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <providesextension>propro</providesextension>
  <extsrcrelease/>
 </package>
-
