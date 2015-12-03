@@ -5,7 +5,7 @@ PHP_PROPRO_HEADERS := $(addprefix $(PHP_PROPRO_BUILDDIR)/,$(PHP_PROPRO_HEADERS))
 $(PHP_PROPRO_BUILDDIR)/%.h: $(PHP_PROPRO_SRCDIR)/src/%.h
 	@cat >$@ <$<
 
-all: propro-build-headers
+$(all_targets): propro-build-headers
 clean: propro-clean-headers
 
 .PHONY: propro-build-headers
