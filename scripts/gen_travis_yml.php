@@ -15,7 +15,7 @@ env:
 
 $gen = include "./travis/pecl/gen-matrix.php";
 $env = $gen([
-	"PHP" => ["master"],
+	"PHP" => ["7.0", "master"],
 	"enable_debug",
 	"enable_maintainer_zts",
 ]);
@@ -31,4 +31,3 @@ before_script:
 
 script:
  - make -f travis/pecl/Makefile test
-
