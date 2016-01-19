@@ -19,20 +19,20 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>mike@php.net</email>
   <active>yes</active>
  </lead>
- <date>2015-12-07</date>
+ <date>2016-01-19</date>
  <version>
-  <release>1.0.2RC1</release>
+  <release>1.0.2</release>
   <api>1.0.0</api>
  </version>
  <stability>
-  <release>beta</release>
+  <release>stable</release>
   <api>stable</api>
  </stability>
  <license uri="http://copyfree.org/content/standard/licenses/2bsd/license.txt">BSD-2-Clause</license>
  <notes><![CDATA[
 * Internals documentation at http://m6w6.github.io/ext-propro/v1.0.x/
 * Travis support
-* Fix package.xml's maximum and minumum PHP version
+* Fix package.xml's maximum and minimum PHP version
 ]]></notes>
  <contents>
   <dir name="/">
