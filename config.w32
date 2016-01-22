@@ -2,15 +2,24 @@
 ARG_ENABLE("propro", "for propro support", "no");
 
 if (PHP_PROPRO == "yes") {
-	var PHP_PROPRO_HEADERS=glob("src/*.h"), PHP_PROPRO_SOURCES=glob("src/*.c");
+	var PHP_PROPRO_HEADERS=glob(configure_module_dirname + "/src/*.h");
+	var PHP_PROPRO_SRC_ARRAY=glob(configure_module_dirname + "/src/*.c");
+	var PHP_PROPRO_SOURCES="";
+	for (var i=0; i<PHP_PROPRO_SRC_ARRAY.length; ++i) {
+		var basename = FSO.GetFileName(PHP_PROPRO_SRC_ARRAY[i]);
+		PHP_PROPRO_SOURCES = PHP_PROPRO_SOURCES + " " + basename;
+	}
 
-	EXTENSION("propro", PHP_PROPRO_SOURCES);
+	//EXTENSION("propro");
+	ADD_SOURCES(configure_module_dirname + "/src", PHP_PROPRO_SOURCES, "propro");
+	EXTENSION("propro", "src/php_propro_api.c");
 	PHP_INSTALL_HEADERS("ext/propro", "php_propro.h");
 	for (var i=0; i<PHP_PROPRO_HEADERS.length; ++i) {
 		var basename = FSO.GetFileName(PHP_PROPRO_HEADERS[i]);
-		copy_and_subst(PHP_PROPRO_HEADERS[i], basename, []);
-		PHP_INSTALL_HEADERS("ext/propro", basename);
+		copy_and_subst("src/" + basename, basename, []);
+		PHP_INSTALL_HEADERS(configure_module_dirname, basename);
 	}
+	ADD_FLAG("CFLAGS_PROPRO", "/I" + configure_module_dirname + " ");
 
 	AC_DEFINE("HAVE_PROPRO", 1);
 }
