@@ -449,7 +449,6 @@ static void write_dimension(zval *object, zval *offset, zval *value)
 		array_init(&proxied_value);
 	}
 
-	SEPARATE_ZVAL(value);
 	Z_TRY_ADDREF_P(value);
 
 	if (offset) {

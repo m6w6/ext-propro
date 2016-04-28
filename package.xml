@@ -19,9 +19,9 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>mike@php.net</email>
   <active>yes</active>
  </lead>
- <date>2016-01-19</date>
+ <date>2016-04-28</date>
  <version>
-  <release>2.0.0</release>
+  <release>2.0.1dev</release>
   <api>2.0.0</api>
  </version>
  <stability>
@@ -30,9 +30,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license uri="http://copyfree.org/content/standard/licenses/2bsd/license.txt">BSD-2-Clause</license>
  <notes><![CDATA[
-* Internals documentation at http://m6w6.github.io/ext-propro/master/
-* Travis support
-* PHP7 compatible version
+* Fixed leak in write_dimension
 ]]></notes>
  <contents>
   <dir name="/">
