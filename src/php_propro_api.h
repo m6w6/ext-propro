@@ -21,7 +21,7 @@
  * Container for the object/array holding the proxied property.
  */
 struct php_property_proxy {
-	/** The container holding the property */
+	/** The reference to the container holding the property */
 	zval container;
 	/** The name of the proxied property */
 	zend_string *member;
