@@ -20,21 +20,20 @@
 
 #include "php_propro_api.h"
 
-#define DEBUG_PROPRO 1
+#define DEBUG_PROPRO 0
 
 static inline php_property_proxy_object_t *get_propro(zval *object);
-static zval *get_parent_proxied_value(zval *object, zval *return_value);
-static zval *get_proxied_value(zval *object, zval *return_value);
-static void set_proxied_value(zval *object, zval *value);
+static inline zval *get_proxied_value(zval *object, zval *return_value);
+static inline void set_proxied_value(zval *object, zval *value);
+
 static zval *read_dimension(zval *object, zval *offset, int type, zval *return_value);
-static ZEND_RESULT_CODE cast_proxied_value(zval *object, zval *return_value, int type);
-static void write_dimension(zval *object, zval *offset, zval *value);
+static ZEND_RESULT_CODE cast_obj(zval *object, zval *return_value, int type);
+static void write_dimension(zval *object, zval *offset, zval *input_value);
 
 #if DEBUG_PROPRO
 /* we do not really care about TS when debugging */
 static int level = 1;
-static const char space[] = "                               ";
-static const char *inoutstr[] = {"< return","="," > enter"};
+static const char *inoutstr[] = {"< return","=       "," > enter "};
 static const char *types[] = {
 		"UNDEF",
 		"NULL",
@@ -77,13 +76,25 @@ static void debug_propro(int inout, const char *f,
 		proxy = obj->proxy;
 	}
 
-	fprintf(stderr, "#PP %p (%p) %s %s %s ",
-			proxy,
-			proxy->container.value.counted,
-			&space[sizeof(space)-level],
-			inoutstr[inout+1], f);
+	fprintf(stderr, "#PP %14p %*c %s %s\t", proxy, level, ' ', inoutstr[inout + 1], f);
 
 	level += inout;
+
+	if (proxy) {
+		fprintf(stderr, " container=%p (%s", Z_COUNTED(proxy->container),
+				types[Z_TYPE(proxy->container)]);
+		if (Z_REFCOUNTED(proxy->container) && Z_REFCOUNT(proxy->container) != 1) {
+			fprintf(stderr, " rc=%d", Z_REFCOUNT(proxy->container));
+		}
+		if (Z_ISREF(proxy->container)) {
+			zval *ref = Z_REFVAL(proxy->container);
+			fprintf(stderr, " %s %p", types[Z_TYPE_P(ref)], ref->value.counted);
+			if (Z_REFCOUNTED_P(ref) && Z_REFCOUNT_P(ref) != 1) {
+				fprintf(stderr, " rc=%d", Z_REFCOUNT_P(ref));
+			}
+		}
+		fprintf(stderr, ") ");
+	}
 
 	_walk(obj);
 
@@ -107,11 +118,14 @@ static void debug_propro(int inout, const char *f,
 	}
 	if (value) {
 		if (Z_ISUNDEF_P(value)) {
-			fprintf(stderr, " = UNDEF");
+			fprintf(stderr, " =UNDEF");
 		} else {
-			fprintf(stderr, " = (%s", types[Z_TYPE_P(value)&0xf]);
-			if (Z_REFCOUNTED_P(value)) {
-				fprintf(stderr, " rc=%u is_ref=%d", Z_REFCOUNT_P(value), Z_ISREF_P(value));
+			fprintf(stderr, " =%p (%s", Z_COUNTED_P(value), types[Z_TYPE_P(value)&0xf]);
+			if (Z_REFCOUNTED_P(value) && Z_REFCOUNT_P(value) != 1) {
+				fprintf(stderr, " rc=%d", Z_REFCOUNT_P(value));
+			}
+			if (Z_ISREF_P(value)) {
+				fprintf(stderr, " ref");
 			}
 			fprintf(stderr, ") ");
 			if (!Z_ISUNDEF_P(value) && Z_TYPE_P(value) != IS_INDIRECT) {
@@ -135,15 +149,12 @@ php_property_proxy_t *php_property_proxy_init(zval *container, zend_string *memb
 	ZVAL_STR_COPY(&offset, member);
 #endif
 
-	debug_propro(1, "init", NULL, proxy, &offset, container);
+	debug_propro(1, "init", NULL, proxy, &offset, NULL);
 
 	ZVAL_COPY(&proxy->container, container);
-	if (Z_TYPE_P(container) == IS_ARRAY) {
-		HT_ALLOW_COW_VIOLATION(Z_ARRVAL_P(container));
-	}
 	proxy->member = zend_string_copy(member);
 
-	debug_propro(-1, "init", NULL, proxy, &offset, container);
+	debug_propro(-1, "init", NULL, proxy, &offset, NULL);
 
 #if DEBUG_PROPRO
 	zval_dtor(&offset);
@@ -155,24 +166,24 @@ php_property_proxy_t *php_property_proxy_init(zval *container, zend_string *memb
 void php_property_proxy_free(php_property_proxy_t **proxy)
 {
 #if DEBUG_PROPRO
-	php_property_proxy_t *proxy_ptr = *proxy;
 	zval offset;
 
-	ZVAL_STR_COPY(&offset, proxy_ptr->member);
+	ZVAL_STR_COPY(&offset, (*proxy)->member);
 #endif
 
 	debug_propro(1, "dtor", NULL, *proxy, &offset, NULL);
 
 	if (*proxy) {
-		debug_propro(0, "dtor", NULL, *proxy, &offset, &(*proxy)->container);
-
 		zval_ptr_dtor(&(*proxy)->container);
+
+		ZVAL_UNDEF(&(*proxy)->container);
 		zend_string_release((*proxy)->member);
+		(*proxy)->member = NULL;
 		efree(*proxy);
 		*proxy = NULL;
 	}
 
-	debug_propro(-1, "dtor", NULL, proxy_ptr, &offset, NULL);
+	debug_propro(-1, "dtor", NULL, NULL, &offset, NULL);
 
 #if DEBUG_PROPRO
 	zval_dtor(&offset);
@@ -225,110 +236,17 @@ static void destroy_obj(zend_object *object)
 	zend_object_std_dtor(object);
 }
 
-static inline php_property_proxy_object_t *get_propro(zval *object)
+static ZEND_RESULT_CODE cast_obj(zval *object, zval *return_value, int type)
 {
-	switch (Z_TYPE_P(object)) {
-	case IS_OBJECT:
-		break;
+	zval tmp;
 
-	EMPTY_SWITCH_DEFAULT_CASE();
-	}
-	return PHP_PROPRO_PTR(Z_OBJ_P(object));
-}
-
-static inline zend_bool got_value(zval *container, zval *value)
-{
-	zval identical;
-
-	if (!Z_ISUNDEF_P(value)) {
-		if (SUCCESS == is_identical_function(&identical, value, container)) {
-			if (Z_TYPE(identical) != IS_TRUE) {
-				return 1;
-			}
-		}
-	}
-
-	return 0;
-}
-
-static zval *get_parent_proxied_value(zval *object, zval *return_value)
-{
-	php_property_proxy_object_t *obj;
-
-	obj = get_propro(object);
-	debug_propro(1, "parent_get", obj, NULL, NULL, NULL);
-
-	if (obj->proxy) {
-		if (!Z_ISUNDEF(obj->parent)) {
-			get_proxied_value(&obj->parent, return_value);
-		}
-	}
-
-	debug_propro(-1, "parent_get", obj, NULL, NULL, return_value);
-
-	return return_value;
-}
-
-static zval *get_proxied_value(zval *object, zval *return_value)
-{
-	php_property_proxy_object_t *obj;
-
-	obj = get_propro(object);
-	debug_propro(1, "get", obj, NULL, NULL, NULL);
-
-	if (obj->proxy) {
-		zval parent_value, *ref, *found_value = NULL, prop_tmp;
-
-		ZVAL_UNDEF(&parent_value);
-		if (!Z_ISUNDEF(obj->parent)) {
-			get_parent_proxied_value(object, &parent_value);
-			ref = &parent_value;
-		}
-
-		if (Z_ISUNDEF(parent_value)) {
-			ref = &obj->proxy->container;
-		} else {
-			zval_ptr_dtor(&obj->proxy->container);
-			ZVAL_COPY(&obj->proxy->container, &parent_value);
-		}
-
-		ZVAL_DEREF(ref);
-
-		switch (Z_TYPE_P(ref)) {
-		case IS_OBJECT:
-			found_value = zend_read_property(Z_OBJCE_P(ref), ref,
-					obj->proxy->member->val, obj->proxy->member->len, 0,
-					&prop_tmp);
-
-			break;
-
-		case IS_ARRAY:
-			found_value = zend_symtable_find(Z_ARRVAL_P(ref), obj->proxy->member);
-			break;
-		}
-
-		if (found_value) {
-			RETVAL_ZVAL(found_value, 1, 0);
-		}
-
-		if (!Z_ISUNDEF(obj->parent)) {
-			zval_ptr_dtor(&parent_value);
-		}
-	}
-
-	debug_propro(-1, "get", obj, NULL, NULL, return_value);
-
-	return return_value;
-}
-
-static ZEND_RESULT_CODE cast_proxied_value(zval *object, zval *return_value,
-		int type)
-{
-	get_proxied_value(object, return_value);
+	ZVAL_UNDEF(&tmp);
+	RETVAL_ZVAL(get_proxied_value(object, &tmp), 1, 0);
 
 	debug_propro(0, "cast", get_propro(object), NULL, NULL, return_value);
 
 	if (!Z_ISUNDEF_P(return_value)) {
+		ZVAL_DEREF(return_value);
 		convert_to_explicit_type_ex(return_value, type);
 		return SUCCESS;
 	}
@@ -336,55 +254,135 @@ static ZEND_RESULT_CODE cast_proxied_value(zval *object, zval *return_value,
 	return FAILURE;
 }
 
+static zval *get_obj(zval *object, zval *return_value)
+{
+	zval tmp;
+
+	ZVAL_UNDEF(&tmp);
+	RETVAL_ZVAL(get_proxied_value(object, &tmp), 1, 0);
+	return return_value;
+}
+
+static void set_obj(zval *object, zval *value) {
+	set_proxied_value(object, value);
+}
+
+static inline php_property_proxy_object_t *get_propro(zval *object)
+{
+	ZEND_ASSERT(Z_TYPE_P(object) == IS_OBJECT);
+	return PHP_PROPRO_PTR(Z_OBJ_P(object));
+}
+
+static inline zval *get_container(zval *object)
+{
+	php_property_proxy_object_t *obj = get_propro(object);
+
+	if (!Z_ISUNDEF(obj->parent)) {
+		zval *parent_value, tmp;
+
+		ZVAL_UNDEF(&tmp);
+		parent_value = get_proxied_value(&obj->parent, &tmp);
+		ZVAL_DEREF(parent_value);
+		switch (Z_TYPE_P(parent_value)) {
+		case IS_OBJECT:
+		case IS_ARRAY:
+			zend_assign_to_variable(&obj->proxy->container, parent_value, IS_CV);
+			break;
+		default:
+			break;
+		}
+	}
+
+	return &obj->proxy->container;
+}
+
+static inline void set_container(zval *object, zval *container)
+{
+	php_property_proxy_object_t *obj = get_propro(object);
+
+	zend_assign_to_variable(&obj->proxy->container, container, IS_CV);
+
+	if (!Z_ISUNDEF(obj->parent)) {
+		set_proxied_value(&obj->parent, &obj->proxy->container);
+	}
+}
+
+static inline zval *get_container_value(zval *container, zend_string *member, zval *return_value)
+{
+	zval *found_value = NULL, prop_tmp;
+
+	ZVAL_DEREF(container);
+	switch (Z_TYPE_P(container)) {
+	case IS_OBJECT:
+		found_value = zend_read_property(Z_OBJCE_P(container), container,
+				member->val, member->len, 0, &prop_tmp);
+
+		break;
+
+	case IS_ARRAY:
+		found_value = zend_symtable_find(Z_ARRVAL_P(container), member);
+		break;
+	}
+
+	if (found_value) {
+		RETVAL_ZVAL(found_value, 0, 0);
+		//ZVAL_COPY_VALUE(return_value, found_value);
+	}
+
+	return return_value;
+}
+
+static inline void set_container_value(zval *container, zend_string *member, zval *value)
+{
+	ZVAL_DEREF(container);
+	switch (Z_TYPE_P(container)) {
+	case IS_OBJECT:
+		zend_update_property(Z_OBJCE_P(container), container,
+				member->val, member->len, value);
+		break;
+
+	case IS_ARRAY:
+		SEPARATE_ARRAY(container);
+		Z_TRY_ADDREF_P(value);
+		zend_symtable_update(Z_ARRVAL_P(container), member, value);
+		break;
+
+	default:
+		ZEND_ASSERT(0);
+	}
+}
+
+
+static zval *get_proxied_value(zval *object, zval *return_value)
+{
+	php_property_proxy_object_t *obj = get_propro(object);
+
+	debug_propro(1, "get", obj, NULL, NULL, NULL);
+
+	if (obj->proxy) {
+		zval *container = get_container(object);
+
+		return_value = get_container_value(container, obj->proxy->member, return_value);
+	}
+
+	debug_propro(-1, "get", obj, NULL, NULL, return_value);
+
+	return return_value;
+}
+
 static void set_proxied_value(zval *object, zval *value)
 {
-	zval parent_value, *ref = NULL;
-	php_property_proxy_object_t *obj;
+	php_property_proxy_object_t *obj = get_propro(object);
 
-	obj = get_propro(object);
 	debug_propro(1, "set", obj, NULL, NULL, value);
 
 	if (obj->proxy) {
-		ZVAL_UNDEF(&parent_value);
-		if (!Z_ISUNDEF(obj->parent)) {
-			get_parent_proxied_value(object, &parent_value);
-			ref = &parent_value;
-		}
-		if (Z_ISUNDEF(parent_value)) {
-			ref = &obj->proxy->container;
-		} else {
-			zval_ptr_dtor(&obj->proxy->container);
-			ZVAL_COPY(&obj->proxy->container, &parent_value);
-		}
+		zval *container = get_container(object);
 
-		ZVAL_DEREF(ref);
+		set_container_value(container, obj->proxy->member, value);
+		set_container(object, container);
 
-		switch (Z_TYPE_P(ref)) {
-		case IS_OBJECT:
-			zend_update_property(Z_OBJCE_P(ref), ref,
-					obj->proxy->member->val, obj->proxy->member->len, value);
-			break;
-
-		case IS_ARRAY:
-			Z_TRY_ADDREF_P(value);
-			zend_symtable_update(Z_ARRVAL_P(ref), obj->proxy->member, value);
-			break;
-
-		default:
-#if DEBUG_PROPRO
-			fprintf(stderr, "set_proxied_value: %d: %s\n",
-					Z_TYPE_P(ref),
-					types[Z_TYPE_P(ref)]);
-#endif
-			ZEND_ASSERT(0);
-		}
-
-		debug_propro(0, "set", obj, NULL, NULL, ref);
-
-		if (!Z_ISUNDEF(obj->parent)) {
-			set_proxied_value(&obj->parent, ref);
-			zval_ptr_dtor(&parent_value);
-		}
+		debug_propro(0, "set", obj, NULL, NULL, value);
 	}
 
 	debug_propro(-1, "set", obj, NULL, NULL, value);
@@ -392,57 +390,64 @@ static void set_proxied_value(zval *object, zval *value)
 
 static zval *read_dimension(zval *object, zval *offset, int type, zval *return_value)
 {
-	zval proxied_value;
+	zval *value, tmp;
 	zend_string *member = offset ? zval_get_string(offset) : NULL;
 
-	debug_propro(1, type == BP_VAR_R ? "dim_read" : "dim_read_ref",
+	debug_propro(1, type == BP_VAR_R ? "dim_r" : "dim_R",
 			get_propro(object), NULL, offset, NULL);
 
-	ZVAL_UNDEF(&proxied_value);
-	get_proxied_value(object, &proxied_value);
+	ZVAL_UNDEF(&tmp);
+	value = get_proxied_value(object, &tmp);
 
-	if (BP_VAR_R == type && member && !Z_ISUNDEF(proxied_value)) {
-		if (Z_TYPE(proxied_value) == IS_ARRAY) {
-			zval *hash_value;
+	if (type == BP_VAR_R) {
+		ZEND_ASSERT(member);
 
-			hash_value = zend_symtable_find(Z_ARRVAL(proxied_value), member);
+		if (!Z_ISUNDEF_P(value)) {
+			zval tmp;
 
-			if (hash_value) {
-				RETVAL_ZVAL(hash_value, 1, 0);
-			}
+			ZVAL_UNDEF(&tmp);
+			RETVAL_ZVAL(get_container_value(value, member, &tmp), 1, 0);
 		}
 	} else {
 		php_property_proxy_t *proxy;
 		php_property_proxy_object_t *proxy_obj;
+		zval *array = value;
+		zend_bool created = Z_ISUNDEF_P(value);
 
-		if (!Z_ISUNDEF(proxied_value)) {
-			SEPARATE_ZVAL(&proxied_value);
-			convert_to_array(&proxied_value);
-		} else {
-			array_init(&proxied_value);
+		ZVAL_DEREF(array);
+		if (Z_REFCOUNTED_P(array) && Z_REFCOUNT_P(array) > 1) {
+			created = 1;
+			SEPARATE_ZVAL_NOREF(array);
 		}
-
-		set_proxied_value(object, &proxied_value);
+		if (Z_TYPE_P(array) != IS_ARRAY) {
+			created = 1;
+			if (Z_ISUNDEF_P(array)) {
+				array_init(array);
+			} else {
+				convert_to_array(array);
+			}
+		}
 
 		if (!member) {
 			member = zend_long_to_str(zend_hash_next_free_element(
-					Z_ARRVAL_P(Z_REFVAL(proxied_value))));
+					Z_ARRVAL_P(array)));
 		}
 
-		proxy = php_property_proxy_init(&proxied_value, member);
-
+		proxy = php_property_proxy_init(value, member);
 		proxy_obj = php_property_proxy_object_new_ex(NULL, proxy);
 		ZVAL_COPY(&proxy_obj->parent, object);
 		RETVAL_OBJ(&proxy_obj->zo);
+
+		if (created) {
+			Z_DELREF_P(value);
+		}
 	}
 
 	if (member) {
 		zend_string_release(member);
 	}
 
-	zval_ptr_dtor(&proxied_value);
-
-	debug_propro(-1, type == BP_VAR_R ? "dim_read" : "dim_read_ref",
+	debug_propro(-1, type == BP_VAR_R ? "dim_r" : "dim_R",
 			get_propro(object), NULL, offset, return_value);
 
 	return return_value;
@@ -450,21 +455,21 @@ static zval *read_dimension(zval *object, zval *offset, int type, zval *return_v
 
 static int has_dimension(zval *object, zval *offset, int check_empty)
 {
-	zval proxied_value;
+	zval *value, tmp;
 	int exists = 0;
 
-	debug_propro(1, "dim_exists", get_propro(object), NULL, offset, NULL);
+	debug_propro(1, "dim_e", get_propro(object), NULL, offset, NULL);
 
-	ZVAL_UNDEF(&proxied_value);
-	get_proxied_value(object, &proxied_value);
+	ZVAL_UNDEF(&tmp);
+	value = get_proxied_value(object, &tmp);
 
-	if (Z_ISUNDEF(proxied_value)) {
-		exists = 0;
-	} else {
+	exists = 0;
+	if (!Z_ISUNDEF_P(value)) {
 		zend_string *zs = zval_get_string(offset);
 
-		if (Z_TYPE(proxied_value) == IS_ARRAY) {
-			zval *zentry = zend_symtable_find(Z_ARRVAL(proxied_value), zs);
+		ZVAL_DEREF(value);
+		if (Z_TYPE_P(value) == IS_ARRAY) {
+			zval *zentry = zend_symtable_find(Z_ARRVAL_P(value), zs);
 
 			if (!zentry) {
 				exists = 0;
@@ -480,73 +485,86 @@ static int has_dimension(zval *object, zval *offset, int check_empty)
 		zend_string_release(zs);
 	}
 
-	zval_ptr_dtor(&proxied_value);
-
-	debug_propro(-1, "dim_exists", get_propro(object), NULL, offset, NULL);
+	debug_propro(-1, "dim_e", get_propro(object), NULL, offset, NULL);
 
 	return exists;
 }
 
-static void write_dimension(zval *object, zval *offset, zval *value)
+static void write_dimension(zval *object, zval *offset, zval *input_value)
 {
-	zval proxied_value;
+	zend_bool created = 0;
+	zval *array, *value, tmp;
 
-	debug_propro(1, "dim_write", get_propro(object), NULL, offset, value);
+	debug_propro(1, "dim_w", get_propro(object), NULL, offset, input_value);
 
-	ZVAL_UNDEF(&proxied_value);
-	get_proxied_value(object, &proxied_value);
+	ZVAL_UNDEF(&tmp);
+	value = get_proxied_value(object, &tmp);
+	array = value;
 
-	if (!Z_ISUNDEF(proxied_value)) {
-		if (Z_TYPE(proxied_value) == IS_ARRAY) {
-			SEPARATE_ZVAL(&proxied_value);
-		} else {
-			convert_to_array(&proxied_value);
+	if (Z_ISUNDEF_P(value)) {
+		array_init(array);
+		created = 1;
+	} else if (Z_TYPE_P(array) == IS_ARRAY) {
+		if (Z_REFCOUNT_P(array) > 1) {
+			SEPARATE_ARRAY(array);
+			created = 1;
 		}
 	} else {
-		array_init(&proxied_value);
+		ZVAL_DEREF(array);
+		if (Z_REFCOUNTED_P(array) && Z_REFCOUNT_P(array) > 1) {
+			SEPARATE_ZVAL(array);
+			created = 1;
+		}
+		if (Z_TYPE_P(array) != IS_ARRAY) {
+			convert_to_array(array);
+			created = 1;
+		}
 	}
 
-	Z_TRY_ADDREF_P(value);
+	Z_TRY_ADDREF_P(input_value);
 
-	HT_ALLOW_COW_VIOLATION(Z_ARRVAL(proxied_value));
+	debug_propro(0, "dim_w", get_propro(object), NULL, offset, input_value);
+
 	if (offset) {
 		zend_string *zs = zval_get_string(offset);
-		zend_symtable_update(Z_ARRVAL(proxied_value), zs, value);
+		zend_symtable_update(Z_ARRVAL_P(array), zs, input_value);
 		zend_string_release(zs);
 	} else {
-		zend_hash_next_index_insert(Z_ARRVAL(proxied_value), value);
+		zend_hash_next_index_insert(Z_ARRVAL_P(array), input_value);
 	}
 
-	set_proxied_value(object, &proxied_value);
+	set_proxied_value(object, value);
 
-	zval_ptr_dtor(&proxied_value);
+	if (created) {
+		Z_DELREF_P(array);
+	}
 
-	debug_propro(-1, "dim_write", get_propro(object), NULL, offset, &proxied_value);
+	debug_propro(-1, "dim_w", get_propro(object), NULL, offset, input_value);
 }
 
 static void unset_dimension(zval *object, zval *offset)
 {
-	zval proxied_value;
+	zval *array, *value, tmp;
 
-	debug_propro(1, "dim_unset", get_propro(object), NULL, offset, NULL);
+	debug_propro(1, "dim_u", get_propro(object), NULL, offset, NULL);
 
-	ZVAL_UNDEF(&proxied_value);
-	get_proxied_value(object, &proxied_value);
+	ZVAL_UNDEF(&tmp);
+	value = get_proxied_value(object, &tmp);
+	array = value;
+	ZVAL_DEREF(array);
 
-	if (Z_TYPE(proxied_value) == IS_ARRAY) {
+	if (Z_TYPE_P(array) == IS_ARRAY) {
 		zend_string *o = zval_get_string(offset);
 
-		SEPARATE_ZVAL(&proxied_value);
+		SEPARATE_ARRAY(array);
+		zend_symtable_del(Z_ARRVAL_P(array), o);
 
-		zend_symtable_del(Z_ARRVAL(proxied_value), o);
-		set_proxied_value(object, &proxied_value);
+		set_proxied_value(object, value);
 
 		zend_string_release(o);
 	}
 
-	zval_ptr_dtor(&proxied_value);
-
-	debug_propro(-1, "dim_unset", get_propro(object), NULL, offset, &proxied_value);
+	debug_propro(-1, "dim_u", get_propro(object), NULL, offset, NULL);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_propro_construct, 0, 0, 2)
@@ -556,25 +574,31 @@ ZEND_BEGIN_ARG_INFO_EX(ai_propro_construct, 0, 0, 2)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(propro, __construct) {
 	zend_error_handling zeh;
-	zval *container, *parent = NULL;
+	zval *reference, *container, *parent = NULL;
 	zend_string *member;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS(), "z/S|O!",
-			&container, &member, &parent,
+	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS(), "zS|O!",
+			&reference, &member, &parent,
 			php_property_proxy_class_entry)) {
 		php_property_proxy_object_t *obj;
 
+		container = reference;
+		ZVAL_DEREF(container);
 		switch (Z_TYPE_P(container)) {
-		case IS_OBJECT:
 		case IS_ARRAY:
+			SEPARATE_ARRAY(container);
+			break;
+		case IS_OBJECT:
 			break;
 		default:
+			SEPARATE_ZVAL(container);
 			convert_to_array(container);
+			break;
 		}
 
 		obj = get_propro(getThis());
-		obj->proxy = php_property_proxy_init(container, member);
+		obj->proxy = php_property_proxy_init(reference, member);
 
 		if (parent) {
 			ZVAL_COPY(&obj->parent, parent);
@@ -602,9 +626,9 @@ static PHP_MINIT_FUNCTION(propro)
 			sizeof(zend_object_handlers));
 	php_property_proxy_object_handlers.offset = XtOffsetOf(php_property_proxy_object_t, zo);
 	php_property_proxy_object_handlers.free_obj = destroy_obj;
-	php_property_proxy_object_handlers.set = set_proxied_value;
-	php_property_proxy_object_handlers.get = get_proxied_value;
-	php_property_proxy_object_handlers.cast_object = cast_proxied_value;
+	php_property_proxy_object_handlers.set = set_obj;
+	php_property_proxy_object_handlers.get = get_obj;
+	php_property_proxy_object_handlers.cast_object = cast_obj;
 	php_property_proxy_object_handlers.read_dimension = read_dimension;
 	php_property_proxy_object_handlers.write_dimension = write_dimension;
 	php_property_proxy_object_handlers.has_dimension = has_dimension;
