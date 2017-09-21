@@ -55,16 +55,20 @@ static const char *types[] = {
 		"pointer"
 };
 
-static void _walk(php_property_proxy_object_t *obj)
+static int _walk(php_property_proxy_object_t *obj)
 {
+	int p = 0;
+
 	if (obj) {
 		if (!Z_ISUNDEF(obj->parent)) {
-			_walk(get_propro(&obj->parent));
+			p += _walk(get_propro(&obj->parent));
 		}
 		if (obj->proxy) {
-			fprintf(stderr, ".%s", obj->proxy->member->val);
+			p += fprintf(stderr, ".%s", obj->proxy->member->val);
 		}
 	}
+
+	return p;
 }
 
 static void debug_propro(int inout, const char *f,
@@ -72,6 +76,8 @@ static void debug_propro(int inout, const char *f,
 		php_property_proxy_t *proxy,
 		zval *offset, zval *value)
 {
+	int width;
+
 	if (!proxy && obj) {
 		proxy = obj->proxy;
 	}
@@ -81,22 +87,21 @@ static void debug_propro(int inout, const char *f,
 	level += inout;
 
 	if (proxy) {
-		fprintf(stderr, " container=%p (%s", Z_COUNTED(proxy->container),
-				types[Z_TYPE(proxy->container)]);
-		if (Z_REFCOUNTED(proxy->container) && Z_REFCOUNT(proxy->container) != 1) {
-			fprintf(stderr, " rc=%d", Z_REFCOUNT(proxy->container));
-		}
+		fprintf(stderr, " container= %-10p <%12s rc=%d ",
+				Z_REFCOUNTED(proxy->container) ? Z_COUNTED(proxy->container) : NULL,
+				types[Z_TYPE(proxy->container)],
+				Z_REFCOUNTED(proxy->container) ? Z_REFCOUNT(proxy->container) : 0);
 		if (Z_ISREF(proxy->container)) {
 			zval *ref = Z_REFVAL(proxy->container);
-			fprintf(stderr, " %s %p", types[Z_TYPE_P(ref)], ref->value.counted);
-			if (Z_REFCOUNTED_P(ref) && Z_REFCOUNT_P(ref) != 1) {
-				fprintf(stderr, " rc=%d", Z_REFCOUNT_P(ref));
-			}
+			fprintf(stderr, " %-12s %p rc=% 2d",
+					types[Z_TYPE_P(ref)],
+					ref->value.counted,
+					Z_REFCOUNTED_P(ref) ? Z_REFCOUNT_P(ref) : -1);
 		}
-		fprintf(stderr, ") ");
+		fprintf(stderr, "> ");
 	}
 
-	_walk(obj);
+	width = _walk(obj);
 
 	if (*f++=='d'
 	&&	*f++=='i'
@@ -110,24 +115,22 @@ static void debug_propro(int inout, const char *f,
 			offset_str = Z_STRVAL_P(o);
 		}
 
-		fprintf(stderr, ".%s", offset_str);
+		width += fprintf(stderr, ".%s", offset_str);
 
 		if (o && o != offset) {
 			zval_ptr_dtor(o);
 		}
 	}
 	if (value) {
+		fprintf(stderr, "%.*s", 32-width, "                                ");
 		if (Z_ISUNDEF_P(value)) {
-			fprintf(stderr, " =UNDEF");
+			fprintf(stderr, " =UNDEF                              ");
 		} else {
-			fprintf(stderr, " =%p (%s", Z_COUNTED_P(value), types[Z_TYPE_P(value)&0xf]);
-			if (Z_REFCOUNTED_P(value) && Z_REFCOUNT_P(value) != 1) {
-				fprintf(stderr, " rc=%d", Z_REFCOUNT_P(value));
-			}
-			if (Z_ISREF_P(value)) {
-				fprintf(stderr, " ref");
-			}
-			fprintf(stderr, ") ");
+			fprintf(stderr, " = %-10p <%12s rc=%d %3s> ",
+					Z_REFCOUNTED_P(value) ? Z_COUNTED_P(value) : NULL,
+					types[Z_TYPE_P(value)&0xf],
+					Z_REFCOUNTED_P(value) ? Z_REFCOUNT_P(value) : 0,
+					Z_ISREF_P(value) ? "ref" : "");
 			if (!Z_ISUNDEF_P(value) && Z_TYPE_P(value) != IS_INDIRECT) {
 				zend_print_flat_zval_r(value TSRMLS_CC);
 			}
@@ -169,9 +172,8 @@ void php_property_proxy_free(php_property_proxy_t **proxy)
 	zval offset;
 
 	ZVAL_STR_COPY(&offset, (*proxy)->member);
-#endif
-
 	debug_propro(1, "dtor", NULL, *proxy, &offset, NULL);
+#endif
 
 	if (*proxy) {
 		zval_ptr_dtor(&(*proxy)->container);
@@ -183,9 +185,9 @@ void php_property_proxy_free(php_property_proxy_t **proxy)
 		*proxy = NULL;
 	}
 
+#if DEBUG_PROPRO
 	debug_propro(-1, "dtor", NULL, NULL, &offset, NULL);
 
-#if DEBUG_PROPRO
 	zval_dtor(&offset);
 #endif
 }
@@ -299,7 +301,6 @@ static inline zval *get_container(zval *object)
 static inline void set_container(zval *object, zval *container)
 {
 	php_property_proxy_object_t *obj = get_propro(object);
-
 	zend_assign_to_variable(&obj->proxy->container, container, IS_CV);
 
 	if (!Z_ISUNDEF(obj->parent)) {
@@ -326,7 +327,6 @@ static inline zval *get_container_value(zval *container, zend_string *member, zv
 
 	if (found_value) {
 		RETVAL_ZVAL(found_value, 0, 0);
-		//ZVAL_COPY_VALUE(return_value, found_value);
 	}
 
 	return return_value;
@@ -341,14 +341,22 @@ static inline void set_container_value(zval *container, zend_string *member, zva
 				member->val, member->len, value);
 		break;
 
+	case IS_UNDEF:
+		array_init(container);
+		/* no break */
+	default:
+		SEPARATE_ZVAL(container);
+		convert_to_array(container);
+		/* no break */
 	case IS_ARRAY:
 		SEPARATE_ARRAY(container);
 		Z_TRY_ADDREF_P(value);
-		zend_symtable_update(Z_ARRVAL_P(container), member, value);
+		if (member) {
+			zend_symtable_update(Z_ARRVAL_P(container), member, value);
+		} else {
+			zend_hash_next_index_insert(Z_ARRVAL_P(container), value);
+		}
 		break;
-
-	default:
-		ZEND_ASSERT(0);
 	}
 }
 
@@ -441,6 +449,8 @@ static zval *read_dimension(zval *object, zval *offset, int type, zval *return_v
 		if (created) {
 			Z_DELREF_P(value);
 		}
+
+		debug_propro(0, created ? "dim_R pp C" : "dim_R pp", get_propro(object), NULL, offset, return_value);
 	}
 
 	if (member) {
@@ -492,52 +502,23 @@ static int has_dimension(zval *object, zval *offset, int check_empty)
 
 static void write_dimension(zval *object, zval *offset, zval *input_value)
 {
-	zend_bool created = 0;
-	zval *array, *value, tmp;
+	zval *array, tmp;
+	zend_string *zs = NULL;
 
 	debug_propro(1, "dim_w", get_propro(object), NULL, offset, input_value);
 
 	ZVAL_UNDEF(&tmp);
-	value = get_proxied_value(object, &tmp);
-	array = value;
-
-	if (Z_ISUNDEF_P(value)) {
-		array_init(array);
-		created = 1;
-	} else if (Z_TYPE_P(array) == IS_ARRAY) {
-		if (Z_REFCOUNT_P(array) > 1) {
-			SEPARATE_ARRAY(array);
-			created = 1;
-		}
-	} else {
-		ZVAL_DEREF(array);
-		if (Z_REFCOUNTED_P(array) && Z_REFCOUNT_P(array) > 1) {
-			SEPARATE_ZVAL(array);
-			created = 1;
-		}
-		if (Z_TYPE_P(array) != IS_ARRAY) {
-			convert_to_array(array);
-			created = 1;
-		}
-	}
-
-	Z_TRY_ADDREF_P(input_value);
-
-	debug_propro(0, "dim_w", get_propro(object), NULL, offset, input_value);
+	array = get_proxied_value(object, &tmp);
 
 	if (offset) {
-		zend_string *zs = zval_get_string(offset);
-		zend_symtable_update(Z_ARRVAL_P(array), zs, input_value);
+		zs = zval_get_string(offset);
+	}
+	set_container_value(array, zs, input_value);
+	if (zs) {
 		zend_string_release(zs);
-	} else {
-		zend_hash_next_index_insert(Z_ARRVAL_P(array), input_value);
 	}
 
-	set_proxied_value(object, value);
-
-	if (created) {
-		Z_DELREF_P(array);
-	}
+	set_proxied_value(object, array);
 
 	debug_propro(-1, "dim_w", get_propro(object), NULL, offset, input_value);
 }
