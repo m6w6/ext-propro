@@ -27,7 +27,9 @@ $a = 123;
 echo "get\n";
 echo $a,"\n";
 
+//echo "foo\n";
 $p["foo"] = 123;
+//echo "bar.baz.a.b\n";
 $p["bar"]["baz"]["a"]["b"]=987;
 
 var_dump($c);

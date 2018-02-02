@@ -10,7 +10,9 @@ echo "Test\n";
 class c {
 	private $storage = array();
 	function __get($p) {
-		return new php\PropertyProxy($this->storage, $p);
+		$pp = new php\PropertyProxy(null, $p,
+			new php\PropertyProxy($this, "storage"));
+		return $pp; 
 	}
 	function __set($p, $v) {
 		$this->storage[$p] = $v;
