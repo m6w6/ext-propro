@@ -360,61 +360,36 @@ static inline zval *get_container_value(zval *container, zend_string *member, zv
 	return return_value;
 }
 
-static inline void cleanup_container(zval *container, zend_bool separated)
+static inline void cleanup_container(zval *object, zval *container, zend_bool separated)
 {
-#if DEBUG_PROPRO > 1
-	fprintf(stderr, ">> cleanup(%s) %p rc=%d\n",
-			separated || (Z_REFCOUNTED_P(container) && !Z_REFCOUNT_P(container)) ? "yes" : "no",
-			Z_REFCOUNTED_P(container) ? Z_COUNTED_P(container) : container,
-			Z_REFCOUNTED_P(container) ? Z_REFCOUNT_P(container) : -1);
-#endif
 	if (separated) {
 		zval_ptr_dtor(container);
 	}
 }
 
-static inline zend_bool separate_container(zval *container)
+static inline zend_bool separate_container(zval *object, zval *container)
 {
-#if DEBUG_PROPRO > 1
-	fprintf(stderr, ">> separate is_ref=%d rc=%d\n", Z_ISREF_P(container),
-			Z_REFCOUNTED_P(container) ? Z_REFCOUNT_P(container) : -1);
-#endif
-
 	switch (Z_TYPE_P(container)) {
 	case IS_OBJECT:
-		break;
+		return 0;
 
 	case IS_ARRAY:
-		if (Z_REFCOUNT_P(container) > 1) {
-			SEPARATE_ZVAL(container);
-#if DEBUG_PROPRO > 1
-			fprintf(stderr, ">> array_dup %p\n", Z_COUNTED_P(container));
-#endif
-			return 1;
-		}
+		/* always duplicate for PHP-7.0 and 7.1 on travis */
+		ZVAL_ARR(container, zend_array_dup(Z_ARRVAL_P(container)));
 		break;
 
 	case IS_UNDEF:
 		array_init(container);
-#if DEBUG_PROPRO > 1
-		fprintf(stderr, ">> created %p\n", Z_COUNTED_P(container));
-#endif
-		return 1;
+		break;
 
 	default:
 		SEPARATE_ZVAL(container);
 		Z_TRY_ADDREF_P(container);
 		convert_to_array(container);
-#if DEBUG_PROPRO > 1
-		fprintf(stderr, ">> converted %p\n", Z_COUNTED_P(container));
-#endif
-		return 1;
+		break;
 	}
 
-#if DEBUG_PROPRO > 1
-		fprintf(stderr, ">> nothing %p\n", Z_COUNTED_P(container));
-#endif
-	return 0;
+	return 1;
 }
 
 static inline zval *set_container_value(zval *container, zend_string *member, zval *value)
@@ -478,10 +453,10 @@ static void set_proxied_value(zval *object, zval *value)
 
 		ZVAL_UNDEF(&tmp);
 		container = get_container(object, &tmp);
-		separated = separate_container(container);
+		separated = separate_container(object, container);
 		set_container_value(container, obj->proxy->member, value);
 		set_container(object, container);
-		cleanup_container(container, separated);
+		cleanup_container(object, container, separated);
 
 		Z_TRY_DELREF_P(value);
 
@@ -594,10 +569,10 @@ static void write_dimension(zval *object, zval *offset, zval *input_value)
 
 	ZVAL_UNDEF(&tmp);
 	array = get_proxied_value(object, &tmp);
-	separated = separate_container(array);
+	separated = separate_container(object, array);
 	set_container_value(array, zs, input_value);
 	set_proxied_value(object, array);
-	cleanup_container(array, separated);
+	cleanup_container(object, array, separated);
 
 	if (zs) {
 		zend_string_release(zs);
