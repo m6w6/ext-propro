@@ -46,13 +46,17 @@ typedef struct php_property_proxy php_property_proxy_t;
  *    	return_value = zend_get_std_object_handlers()->read_property(object, member, type, cache_slot, tmp);
  *
  *    	if (handler) {
- *    		handler->read(object, tmp);
- *
- *    		zval_ptr_dtor(return_value);
- *    		ZVAL_COPY_VALUE(return_value, tmp);
+ *    		handler->read(object, return_value);
  *    	}
  *    } else {
- *    	return_value = php_property_proxy_zval(object, member_name);
+ *    	php_property_proxy_t *proxy;
+ *    	php_property_proxy_object_t *proxy_obj;
+ *
+ *    	proxy = php_property_proxy_init(object, member_name);
+ *    	proxy_obj = php_property_proxy_object_new_ex(NULL, proxy);
+ *
+ *    	ZVAL_OBJ(tmp, &proxy_obj->zo);
+ *    	return_value = tmp;
  *    }
  *
  *    zend_string_release(member_name);
