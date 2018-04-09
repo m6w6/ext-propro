@@ -16,7 +16,7 @@
 extern zend_module_entry propro_module_entry;
 #define phpext_propro_ptr &propro_module_entry
 
-#define PHP_PROPRO_VERSION "2.0.1"
+#define PHP_PROPRO_VERSION "2.1.0"
 
 #ifdef PHP_WIN32
 #	define PHP_PROPRO_API __declspec(dllexport)
