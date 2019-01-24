@@ -10,7 +10,6 @@ addons:
    - php-pear
 
 env:
- matrix:
 <?php
 
 $gen = include "./travis/pecl/gen-matrix.php";
@@ -19,8 +18,10 @@ $env = $gen([
 	"enable_debug",
 	"enable_maintainer_zts",
 ]);
-foreach ($env as $e) {
-	printf("  - %s\n", $e);
+foreach ($env as $grp) {
+	foreach ($grp as $e) {
+		printf(" - %s\n", $e);
+	}
 }
 
 ?>
