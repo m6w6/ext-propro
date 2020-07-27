@@ -314,6 +314,7 @@ static ZEND_RESULT_CODE cast_obj(zval *object, zval *return_value, int type)
 	return FAILURE;
 }
 
+ #if PHP_MAJOR_VERSION < 8 
 static zval *get_obj(zval *object, zval *return_value)
 {
 	zval tmp;
@@ -326,6 +327,7 @@ static zval *get_obj(zval *object, zval *return_value)
 static void set_obj(zval *object, zval *value) {
 	set_proxied_value(object, value);
 }
+#endif
 
 static inline zval *get_container(zval *object, zval *tmp)
 {
@@ -679,8 +681,10 @@ static PHP_MINIT_FUNCTION(propro)
 	php_property_proxy_object_handlers.free_obj = destroy_obj;
 	php_property_proxy_object_handlers.get_gc = get_gc;
 	php_property_proxy_object_handlers.get_debug_info = get_debug_info;
+	#if PHP_MAJOR_VERSION < 8 
 	php_property_proxy_object_handlers.set = set_obj;
 	php_property_proxy_object_handlers.get = get_obj;
+	#endif
 	php_property_proxy_object_handlers.cast_object = cast_obj;
 	php_property_proxy_object_handlers.read_dimension = read_dimension;
 	php_property_proxy_object_handlers.write_dimension = write_dimension;
