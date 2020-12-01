@@ -1,7 +1,7 @@
 
 ARG_ENABLE("propro", "for propro support", "no");
 
-if (PHP_PROPRO == "yes") {
+if (PHP_PROPRO == "yes" && PHP_VERSION <= 7) {
 	var PHP_PROPRO_HEADERS=glob(configure_module_dirname + "/src/*.h");
 	var PHP_PROPRO_SRC_ARRAY=glob(configure_module_dirname + "/src/*.c");
 	var PHP_PROPRO_SOURCES="";
